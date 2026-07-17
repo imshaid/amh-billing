@@ -1,0 +1,59 @@
+.screen {
+  padding: var(--space-xl) var(--space-lg);
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.heading {
+  font-family: var(--font-bengali);
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--chrome-text);
+  margin: 0 0 var(--space-xs) 0;
+}
+
+.subheading {
+  font-family: var(--font-bengali);
+  font-size: 0.85rem;
+  color: var(--chrome-text-muted);
+  margin: 0 0 var(--space-lg) 0;
+}
+
+.categoryGroup {
+  margin-bottom: var(--space-lg);
+}
+
+.categoryLabel {
+  font-family: var(--font-bengali);
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--chrome-text-muted);
+  margin: 0 0 var(--space-sm) 0;
+}
+
+.packageList {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.packageRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #ffffff;
+  border: 1px solid var(--chrome-border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-sm) var(--space-md);
+  font-family: var(--font-bengali);
+}
+
+.packageName {
+  font-size: 0.9rem;
+  color: var(--chrome-text);
+}
+
+.packageRate {
+  font-size: 0.85rem;
+  color: var(--chrome-text-muted);
+}

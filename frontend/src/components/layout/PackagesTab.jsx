@@ -10,7 +10,7 @@ import styles from "./PackagesTab.module.css";
  * active Page. Disabled entirely when no Page is active, since there is
  * nothing to add a line item *to*.
  *
- * `pages` is read from AppShell's shared `usePages` (threaded through
+ * `pages` is read from WorkspaceView's shared `usePages` (threaded through
  * BottomPanel) rather than fetched again here, so the line-item count used
  * for `sl` matches exactly what CanvasArea is currently showing. After the
  * write, `refreshPages()` is called so that shared state — and therefore
@@ -44,25 +44,29 @@ export default function PackagesTab({ activePageId, pages, refreshPages }) {
   }
 
   if (status === "loading") {
-    return <p className={styles.emptyState}>Loading packages…</p>;
+    return <p className={styles.emptyState}>প্যাকেজ লোড হচ্ছে…</p>;
   }
 
   if (!activePageId) {
     return (
       <p className={styles.emptyState}>
-        Select or create a page to start adding packages.
+        প্যাকেজ যোগ করা শুরু করতে একটা পেজ বেছে নিন বা তৈরি করুন।
       </p>
     );
   }
 
   return (
     <div className={styles.tab}>
-      {groupedPackages.map(({ category, packages }) => (
+      {groupedPackages.map(({ category, label, packages }) => (
         <div key={category} className={styles.categoryGroup}>
-          <p className={styles.categoryLabel}>{category}</p>
+          <p className={styles.categoryLabel}>{label}</p>
           <div className={styles.chipGrid}>
             {packages.map((pkg) => (
-              <PackageChip key={pkg.id} pkg={pkg} onClick={() => handleAddPackage(pkg)} />
+              <PackageChip
+                key={pkg.id}
+                pkg={pkg}
+                onClick={() => handleAddPackage(pkg)}
+              />
             ))}
           </div>
         </div>

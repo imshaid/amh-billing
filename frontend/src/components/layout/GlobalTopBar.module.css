@@ -1,0 +1,72 @@
+.topBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+  padding: 0 var(--space-md);
+  height: var(--mobile-topbar-height);
+  border-bottom: 1px solid var(--chrome-border);
+  background: #ffffff;
+  flex-shrink: 0;
+}
+
+.homeButton {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  background: none;
+  border: none;
+  padding: var(--space-xs);
+  cursor: pointer;
+  font-family: var(--font-bengali);
+}
+
+.homeButton:hover .title {
+  color: var(--chrome-accent);
+}
+
+.title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--chrome-text);
+  margin: 0;
+}
+
+.activeSessionName {
+  font-family: var(--font-bengali);
+  font-size: 0.85rem;
+  color: var(--chrome-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 200px;
+}
+
+.hamburgerButton {
+  background: none;
+  border: none;
+  padding: var(--space-xs);
+  cursor: pointer;
+  display: none;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.hamburgerButton span {
+  display: block;
+  width: 20px;
+  height: 2px;
+  background: var(--chrome-text);
+  border-radius: 1px;
+}
+
+/* NOTE: literal copy of --breakpoint-mobile — see AppShell.module.css. */
+@media (max-width: 768px) {
+  .hamburgerButton {
+    display: flex;
+  }
+
+  .activeSessionName {
+    display: none; /* not enough room next to the hamburger on small screens */
+  }
+}

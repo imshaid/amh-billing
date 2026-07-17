@@ -22,7 +22,9 @@ export default function PackageChip({ pkg, onClick, disabled = false }) {
       title={pkg.items.map((item) => item.text).join("\n")}
     >
       <span className={styles.name}>{pkg.name}</span>
-      <span className={styles.rate}>{pkg.rate != null ? `৳${pkg.rate}` : "no rate set"}</span>
+      <span className={styles.rate}>
+        {pkg.rate != null ? `৳${pkg.rate}` : "রেট নেই"}
+      </span>
     </button>
   );
 }

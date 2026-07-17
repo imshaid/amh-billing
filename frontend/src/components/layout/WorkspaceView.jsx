@@ -1,20 +1,22 @@
 import { useAppState } from "../../state/useAppState.js";
 import { usePages } from "../../hooks/usePages.js";
 import Sidebar from "./Sidebar.jsx";
-import MobileTopBar from "./MobileTopBar.jsx";
 import CanvasArea from "./CanvasArea.jsx";
 import BottomPanel from "./BottomPanel.jsx";
-import styles from "./AppShell.module.css";
+import styles from "./WorkspaceView.module.css";
 
 /**
- * The app's top-level workspace shell — everything the user sees once past
- * the dev bootstrap checkpoint in App.jsx. Composes:
+ * The Bill/Invoice editing workspace — one of the top-level views reachable
+ * from the landing page's grid (see App.jsx for the view router). Composes:
  *   - Sidebar: list of Sets, pick which one is active (drawer on mobile)
- *   - MobileTopBar: hamburger trigger for the drawer, mobile only (CSS hides
- *     it on desktop rather than conditionally rendering, so there's no
- *     layout shift at the breakpoint)
  *   - CanvasArea: renders the active Page (Bill/Invoice/Summary preview)
  *   - BottomPanel: Packages/Actions tabs for editing the active Page
+ *
+ * GlobalTopBar (hamburger + Home button) is rendered by App.jsx above this
+ * component, not inside it — it's persistent across every view, not just
+ * this one. This used to be a self-contained "AppShell" rendered directly
+ * from App.jsx; it's now one of five sibling views (landing, workspace,
+ * previousSessions, packages, analytics) selected by `state.currentView`.
  *
  * `usePages` is called ONCE here, not separately inside CanvasArea and
  * BottomPanel. Reason: BottomPanel's PackagesTab writes a new LineItem to
@@ -27,13 +29,12 @@ import styles from "./AppShell.module.css";
  * performs a write, and the resulting `pages` array is threaded down to
  * whichever child renders it.
  */
-export default function AppShell() {
+export default function WorkspaceView() {
   const { state } = useAppState();
   const { pages, status, refresh } = usePages(state.activeSetId);
 
   return (
     <div className={styles.shell}>
-      <MobileTopBar />
       <Sidebar />
 
       <div className={styles.mainColumn}>

@@ -4,23 +4,24 @@ import {
   getAllPackages,
 } from "./db/packages.repository.js";
 import { defaultPackages } from "./db/seed/defaultPackages.js";
-import AppShell from "./components/layout/AppShell.jsx";
+import AppRouter from "./components/layout/AppRouter.jsx";
 
 /**
  * Bootstrap gate.
  *
  * Seeds the package list on first run (still genuinely needed — a fresh
  * IndexedDB has no packages until this runs once) and reads it back to
- * confirm the DB is reachable before rendering the real app. The previous
- * version of this file rendered a standalone status readout plus the raw
- * BillPage/InvoicePage sample previews directly; that was itself a
- * temporary scaffold for visually verifying BillPage/InvoicePage against
- * the hotel's sample images, and is now superseded by AppShell (Sidebar +
- * CanvasArea + BottomPanel), which renders real Pages from IndexedDB
- * instead of the hardcoded sample data. The sample data files
- * (sampleBillPage.js / sampleInvoicePage.js) are left in place for that
- * component-level visual check — see BillPage/InvoicePage — they're just no
- * longer wired into the main render path.
+ * confirm the DB is reachable before rendering the real app. Once ready,
+ * renders AppRouter — the persistent GlobalTopBar plus whichever top-level
+ * view is active (landing / workspace / previousSessions / packages /
+ * analytics; see appReducer.js's `currentView` and AppRouter.jsx). This
+ * file used to render BillPage/InvoicePage sample previews directly as a
+ * temporary scaffold for visually verifying those components against the
+ * hotel's sample images; that scaffold is superseded now that real Pages
+ * render inside WorkspaceView. The sample data files (sampleBillPage.js /
+ * sampleInvoicePage.js) are left in place for that component-level visual
+ * check — see BillPage/InvoicePage — they're just no longer wired into the
+ * main render path.
  */
 export default function App() {
   const [status, setStatus] = useState("loading");
@@ -70,7 +71,7 @@ export default function App() {
   if (status === "loading") {
     return (
       <div style={{ padding: "var(--space-xl)", textAlign: "center" }}>
-        <p style={{ color: "var(--chrome-text-muted)" }}>Loading IndexedDB…</p>
+        <p style={{ color: "var(--chrome-text-muted)" }}>লোড হচ্ছে…</p>
       </div>
     );
   }
@@ -78,10 +79,10 @@ export default function App() {
   if (status === "error") {
     return (
       <div style={{ padding: "var(--space-xl)", textAlign: "center" }}>
-        <p style={{ color: "crimson" }}>IndexedDB bootstrap failed: {error}</p>
+        <p style={{ color: "crimson" }}>ডাটাবেস চালু করা যায়নি: {error}</p>
       </div>
     );
   }
 
-  return <AppShell />;
+  return <AppRouter />;
 }

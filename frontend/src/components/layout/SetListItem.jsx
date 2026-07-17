@@ -22,10 +22,8 @@ export default function SetListItem({ set, isActive, onSelect }) {
         onClick={onSelect}
         aria-current={isActive ? "true" : undefined}
       >
-        <span className={styles.name}>{set.name || "Untitled Session"}</span>
-        <span className={styles.meta}>
-          {pageCount} {pageCount === 1 ? "page" : "pages"}
-        </span>
+        <span className={styles.name}>{set.name || "শিরোনামহীন সেশন"}</span>
+        <span className={styles.meta}>{pageCount} টি পেজ</span>
       </button>
     </li>
   );

@@ -4,8 +4,23 @@ import { getAllPackages } from "../db/packages.repository.js";
 /** Display order for grouping — categories not in this list (i.e. `null`,
  * the à la carte items like Biscuit/Juice/Water) are shown first under an
  * "Normal" heading, matching the original menu's own "Normal" section (see
- * project files: packageitem.pdf) before Snacks/Lunch/Iftar. */
+ * project files: packageitem.pdf) before Snacks/Lunch/Iftar. These keys
+ * match `Package.category`'s stored values exactly (see domain/models/
+ * Package.js) — do not translate them here, only their display label below. */
 const CATEGORY_ORDER = ["Normal", "Snacks", "Lunch", "Iftar"];
+
+/** Bangla labels shown in the picker UI. Kept separate from CATEGORY_ORDER
+ * (and from `Package.category`'s actual stored value) so the UI can be in
+ * Bangla without touching the English category strings persisted in
+ * IndexedDB — see docs/data-model.md, Package.category is typed as
+ * "Snacks"|"Lunch"|"Iftar"|null and nothing reads/writes a Bangla version
+ * of it anywhere else in the app. */
+const CATEGORY_LABELS = {
+  Normal: "সাধারণ",
+  Snacks: "নাস্তা",
+  Lunch: "লাঞ্চ",
+  Iftar: "ইফতার",
+};
 
 /**
  * Loads all Packages once and groups them by category for the picker UI.
@@ -15,7 +30,7 @@ const CATEGORY_ORDER = ["Normal", "Snacks", "Lunch", "Iftar"];
  * (future) Package editor to call after a save.
  *
  * @returns {{
- *   groupedPackages: { category: string, packages: import('../domain/models/Package.js').Package[] }[],
+ *   groupedPackages: { category: string, label: string, packages: import('../domain/models/Package.js').Package[] }[],
  *   status: "loading"|"ready"|"error",
  *   error: string|null,
  *   refresh: () => Promise<void>,
@@ -56,6 +71,10 @@ function groupByCategory(packages) {
   }
 
   return CATEGORY_ORDER.filter((category) => byCategory.has(category)).map(
-    (category) => ({ category, packages: byCategory.get(category) }),
+    (category) => ({
+      category,
+      label: CATEGORY_LABELS[category] ?? category,
+      packages: byCategory.get(category),
+    }),
   );
 }

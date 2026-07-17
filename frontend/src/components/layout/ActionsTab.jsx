@@ -3,6 +3,16 @@ import { addPage, revisePage } from "../../db/pages.repository.js";
 import { resyncSetPageOrder } from "../../db/sets.repository.js";
 import styles from "./ActionsTab.module.css";
 
+/** Bangla display labels for Page.type, which is stored in IndexedDB as
+ * "bill"|"invoice"|"summary" per docs/data-model.md — only the label shown
+ * here changes, the stored value is untouched (same pattern as
+ * usePackages.js's CATEGORY_LABELS). */
+const PAGE_TYPE_LABELS = {
+  bill: "বিল",
+  invoice: "চালান",
+  summary: "সামারি",
+};
+
 /**
  * Session-level actions: add a new Bill/Invoice/Summary page to the active
  * Set, pick which existing page is active, and duplicate-as-revision an
@@ -13,7 +23,7 @@ import styles from "./ActionsTab.module.css";
  * gate that distinction more precisely).
  *
  * PDF export itself isn't wired up yet — the backend Puppeteer service
- * (see backend/, currently empty) doesn't exist. The "Export" button is a
+ * (see backend/, currently empty) doesn't exist. The "এক্সপোর্ট" button is a
  * visible placeholder so the tab's shape doesn't need to change again once
  * export ships; it's disabled until then.
  *
@@ -24,7 +34,12 @@ import styles from "./ActionsTab.module.css";
  *   refreshPages: () => Promise<void>,
  * }} props
  */
-export default function ActionsTab({ activeSetId, activePageId, pages, refreshPages }) {
+export default function ActionsTab({
+  activeSetId,
+  activePageId,
+  pages,
+  refreshPages,
+}) {
   const { dispatch } = useAppState();
 
   async function handleAddPage(type) {
@@ -45,7 +60,9 @@ export default function ActionsTab({ activeSetId, activePageId, pages, refreshPa
   if (!activeSetId) {
     return (
       <div className={styles.tab}>
-        <p className={styles.emptyState}>Select or create a session first.</p>
+        <p className={styles.emptyState}>
+          আগে একটা সেশন বেছে নিন বা তৈরি করুন।
+        </p>
       </div>
     );
   }
@@ -53,24 +70,35 @@ export default function ActionsTab({ activeSetId, activePageId, pages, refreshPa
   return (
     <div className={styles.tab}>
       <div className={styles.section}>
-        <p className={styles.sectionLabel}>Add page</p>
+        <p className={styles.sectionLabel}>পেজ যোগ করুন</p>
         <div className={styles.buttonRow}>
-          <button className={styles.actionButton} onClick={() => handleAddPage("bill")}>
-            + Bill
+          <button
+            className={styles.actionButton}
+            onClick={() => handleAddPage("bill")}
+          >
+            + বিল
           </button>
-          <button className={styles.actionButton} onClick={() => handleAddPage("invoice")}>
-            + Invoice
+          <button
+            className={styles.actionButton}
+            onClick={() => handleAddPage("invoice")}
+          >
+            + চালান
           </button>
-          <button className={styles.actionButton} onClick={() => handleAddPage("summary")}>
-            + Summary
+          <button
+            className={styles.actionButton}
+            onClick={() => handleAddPage("summary")}
+          >
+            + সামারি
           </button>
         </div>
       </div>
 
       <div className={styles.section}>
-        <p className={styles.sectionLabel}>Pages in this session</p>
+        <p className={styles.sectionLabel}>এই সেশনের পেজসমূহ</p>
         {!pages || pages.length === 0 ? (
-          <p className={styles.emptyState}>No pages yet — add one above.</p>
+          <p className={styles.emptyState}>
+            এখনো কোনো পেজ নেই — উপর থেকে একটা যোগ করুন।
+          </p>
         ) : (
           <ul className={styles.pageList}>
             {pages.map((page) => (
@@ -79,22 +107,25 @@ export default function ActionsTab({ activeSetId, activePageId, pages, refreshPa
                 className={`${styles.pageRow} ${
                   page.id === activePageId ? styles.pageRowActive : ""
                 }`}
-                onClick={() => dispatch({ type: "SET_ACTIVE_PAGE", payload: page.id })}
+                onClick={() =>
+                  dispatch({ type: "SET_ACTIVE_PAGE", payload: page.id })
+                }
               >
                 <span className={styles.pageRowType}>
-                  {page.type} — {page.serialOrLogCode || page.buyerName || "untitled"}
+                  {PAGE_TYPE_LABELS[page.type] ?? page.type} —{" "}
+                  {page.serialOrLogCode || page.buyerName || "শিরোনামহীন"}
                 </span>
                 <span className={styles.pageRowMeta}>
-                  {page.date || "no date"}
+                  {page.date || "তারিখ নেই"}
                   <button
                     className={`${styles.actionButton} ${styles.duplicateButton}`}
                     onClick={(e) => {
                       e.stopPropagation();
                       handleDuplicatePage(page.id);
                     }}
-                    title="Duplicate as a new revision (original stays unchanged)"
+                    title="নতুন রিভিশন হিসেবে ডুপ্লিকেট করুন (মূল পেজ অপরিবর্তিত থাকবে)"
                   >
-                    Duplicate
+                    ডুপ্লিকেট
                   </button>
                 </span>
               </li>
@@ -104,9 +135,13 @@ export default function ActionsTab({ activeSetId, activePageId, pages, refreshPa
       </div>
 
       <div className={styles.section}>
-        <p className={styles.sectionLabel}>Export</p>
-        <button className={styles.actionButton} disabled title="PDF export service not built yet">
-          Export PDF (coming soon)
+        <p className={styles.sectionLabel}>এক্সপোর্ট</p>
+        <button
+          className={styles.actionButton}
+          disabled
+          title="PDF এক্সপোর্ট সার্ভিস এখনো তৈরি হয়নি"
+        >
+          PDF এক্সপোর্ট (শীঘ্রই আসছে)
         </button>
       </div>
     </div>

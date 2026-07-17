@@ -9,10 +9,10 @@ import styles from "./BottomPanel.module.css";
  * and session-level actions (infrequent) both stay one click away without
  * either one crowding the live preview above.
  *
- * `pages`/`refreshPages` are passed straight through from AppShell's shared
- * `usePages` call down to whichever tab needs them (PackagesTab writes a
- * LineItem then calls `refreshPages` so CanvasArea's copy of `pages`
- * updates too — see the comment in AppShell.jsx).
+ * `pages`/`refreshPages` are passed straight through from WorkspaceView's
+ * shared `usePages` call down to whichever tab needs them (PackagesTab
+ * writes a LineItem then calls `refreshPages` so CanvasArea's copy of
+ * `pages` updates too — see the comment in WorkspaceView.jsx).
  *
  * @param {{
  *   activeSetId: string|null,
@@ -21,7 +21,12 @@ import styles from "./BottomPanel.module.css";
  *   refreshPages: () => Promise<void>,
  * }} props
  */
-export default function BottomPanel({ activeSetId, activePageId, pages, refreshPages }) {
+export default function BottomPanel({
+  activeSetId,
+  activePageId,
+  pages,
+  refreshPages,
+}) {
   const { state, dispatch } = useAppState();
 
   function selectTab(tab) {
@@ -39,7 +44,7 @@ export default function BottomPanel({ activeSetId, activePageId, pages, refreshP
           }`}
           onClick={() => selectTab("packages")}
         >
-          Packages
+          প্যাকেজ
         </button>
         <button
           role="tab"
@@ -49,7 +54,7 @@ export default function BottomPanel({ activeSetId, activePageId, pages, refreshP
           }`}
           onClick={() => selectTab("actions")}
         >
-          Actions
+          অ্যাকশন
         </button>
       </div>
 

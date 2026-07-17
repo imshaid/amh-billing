@@ -1,17 +1,21 @@
 /*
  * Desktop: Sidebar is a fixed left column; CanvasArea + BottomPanel stack
  * in the remaining space, BottomPanel docked to the bottom.
- * Mobile (<768px): Sidebar becomes an off-canvas drawer (see Sidebar.jsx),
- * a MobileTopBar takes its place at the top, and BottomPanel becomes a
- * bottom sheet. The grid-template-columns swap is what turns the sidebar
- * column on/off — no JS layout branching needed for that part.
+ * Mobile (<768px): Sidebar becomes an off-canvas drawer (see Sidebar.jsx)
+ * and the grid-template-columns swap removes its column — no JS layout
+ * branching needed for that part.
+ *
+ * `height: 100%` (not 100vh) — this view now renders below the persistent
+ * GlobalTopBar (see App.jsx), which already reserves `--mobile-topbar-height`
+ * at the App root. Using 100vh here would overflow the viewport by that
+ * same amount.
  */
 
 .shell {
   display: grid;
   grid-template-columns: var(--sidebar-width) 1fr;
   grid-template-rows: 1fr;
-  height: 100vh;
+  height: 100%;
   background: var(--chrome-bg);
   color: var(--chrome-text);
   font-family: var(--font-ui);
@@ -31,10 +35,5 @@
 @media (max-width: 768px) {
   .shell {
     grid-template-columns: 1fr;
-    grid-template-rows: var(--mobile-topbar-height) 1fr;
-  }
-
-  .mainColumn {
-    grid-template-rows: 1fr var(--bottom-panel-height);
   }
 }

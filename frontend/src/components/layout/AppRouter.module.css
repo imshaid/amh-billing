@@ -1,0 +1,22 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.viewArea {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+/* WorkspaceView manages its own internal scrolling (CanvasArea/BottomPanel),
+   so it should not also get .viewArea's overflow-y — that would create two
+   nested scrollbars. The other views (landing, previousSessions, packages,
+   analytics) are simple scrollable documents and rely on .viewArea's own
+   scroll instead. */
+.viewAreaNoScroll {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}

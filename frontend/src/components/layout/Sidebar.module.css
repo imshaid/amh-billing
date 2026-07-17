@@ -62,11 +62,14 @@
 
 /* NOTE: CSS custom properties can't be read inside @media conditions, so
    this 768px is a literal copy of --breakpoint-mobile in tokens.css — see
-   AppShell.module.css for the full explanation. */
+   WorkspaceView.module.css for the full explanation. */
 @media (max-width: 768px) {
   .sidebar {
     position: fixed;
-    inset: 0 25% 0 0;
+    /* top starts below GlobalTopBar (--mobile-topbar-height), not the very
+       top of the viewport — the top bar is persistent and stays visible
+       above the drawer, including its Home button, while the drawer is open. */
+    inset: var(--mobile-topbar-height) 25% 0 0;
     z-index: 30;
     transform: translateX(-100%);
     transition: transform 0.2s ease-out;
@@ -79,7 +82,7 @@
 
   .scrim {
     position: fixed;
-    inset: 0;
+    inset: var(--mobile-topbar-height) 0 0 0;
     background: rgba(0, 0, 0, 0.3);
     z-index: 20;
   }

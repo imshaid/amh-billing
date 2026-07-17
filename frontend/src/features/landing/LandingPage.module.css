@@ -1,0 +1,27 @@
+.landing {
+  padding: var(--space-xl) var(--space-lg);
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+.heading {
+  font-family: var(--font-bengali);
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--chrome-text);
+  margin: 0 0 var(--space-lg) 0;
+  text-align: center;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-md);
+}
+
+/* NOTE: literal copy of --breakpoint-mobile — see WorkspaceView.module.css. */
+@media (max-width: 768px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}

@@ -5,12 +5,12 @@ import styles from "./Sidebar.module.css";
 
 /**
  * Lists every Set and lets the user pick which one is active. On desktop
- * this renders as a fixed left column (see AppShell's grid). On mobile it's
- * an off-canvas drawer toggled by MobileTopBar's hamburger button, tracked
- * via `state.isSidebarDrawerOpen` in useAppState — the drawer's open/closed
- * class and the scrim are both driven by that one flag.
+ * this renders as a fixed left column (see WorkspaceView's grid). On mobile
+ * it's an off-canvas drawer toggled by GlobalTopBar's hamburger button,
+ * tracked via `state.isSidebarDrawerOpen` in useAppState — the drawer's
+ * open/closed class and the scrim are both driven by that one flag.
  *
- * "+ New Session" is wired up to `createSet` here, but the actual session
+ * "+ নতুন সেশন" is wired up to `createSet` here, but the actual session
  * creation *modal* (choosing how many Bill/Invoice/Summary pages) is a
  * separate not-yet-built feature (features/session/) — for now this creates
  * a bare, empty Set so the rest of the shell has something to select
@@ -21,7 +21,9 @@ export default function Sidebar() {
   const { state, dispatch } = useAppState();
 
   async function handleCreateSet() {
-    const set = await createSet({ name: `Untitled Session — ${new Date().toLocaleDateString()}` });
+    const set = await createSet({
+      name: `নতুন সেশন — ${new Date().toLocaleDateString("bn-BD")}`,
+    });
     dispatch({ type: "SET_ACTIVE_SET", payload: set.id });
     dispatch({ type: "CLOSE_SIDEBAR_DRAWER" });
   }
@@ -42,23 +44,25 @@ export default function Sidebar() {
 
       <nav
         className={`${styles.sidebar} ${state.isSidebarDrawerOpen ? styles.sidebarOpen : ""}`}
-        aria-label="Sessions"
+        aria-label="সেশন তালিকা"
       >
         <div className={styles.header}>
-          <h2 className={styles.title}>Sessions</h2>
+          <h2 className={styles.title}>সেশনসমূহ</h2>
           <button className={styles.newSetButton} onClick={handleCreateSet}>
-            + New Session
+            + নতুন সেশন
           </button>
         </div>
 
-        {status === "loading" && <p className={styles.statusLine}>Loading…</p>}
+        {status === "loading" && (
+          <p className={styles.statusLine}>লোড হচ্ছে…</p>
+        )}
         {status === "error" && (
-          <p className={styles.statusLine}>Couldn't load sessions.</p>
+          <p className={styles.statusLine}>সেশন লোড করা যায়নি।</p>
         )}
 
         {status === "ready" && sets.length === 0 && (
           <p className={styles.emptyState}>
-            No sessions yet. Start one with "+ New Session".
+            এখনো কোনো সেশন নেই। "+ নতুন সেশন" দিয়ে শুরু করুন।
           </p>
         )}
 

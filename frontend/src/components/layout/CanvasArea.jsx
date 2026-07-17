@@ -13,10 +13,10 @@ import styles from "./CanvasArea.module.css";
  * useActivePage has already substituted in the live-aggregated lineItems
  * before this component ever sees it.
  *
- * `pages`/`status` come from AppShell's single shared `usePages` call (see
- * the comment there) rather than this component calling the hook itself —
- * that's what lets a write from BottomPanel's PackagesTab show up here
- * without a manual refresh prop drilled sideways between siblings.
+ * `pages`/`status` come from WorkspaceView's single shared `usePages` call
+ * (see the comment there) rather than this component calling the hook
+ * itself — that's what lets a write from BottomPanel's PackagesTab show up
+ * here without a manual refresh prop drilled sideways between siblings.
  *
  * @param {{
  *   activeSetId: string|null,
@@ -25,15 +25,20 @@ import styles from "./CanvasArea.module.css";
  *   status: "idle"|"loading"|"ready"|"error",
  * }} props
  */
-export default function CanvasArea({ activeSetId, activePageId, pages, status }) {
+export default function CanvasArea({
+  activeSetId,
+  activePageId,
+  pages,
+  status,
+}) {
   const activePage = useActivePage(pages, activePageId);
 
   if (!activeSetId) {
     return (
       <div className={styles.canvas}>
         <div className={styles.emptyState}>
-          <p className={styles.emptyStateTitle}>No session selected</p>
-          <p>Pick a session from the sidebar, or start a new one.</p>
+          <p className={styles.emptyStateTitle}>কোনো সেশন নির্বাচিত নেই</p>
+          <p>সাইডবার থেকে একটা সেশন বেছে নিন, অথবা নতুন একটা শুরু করুন।</p>
         </div>
       </div>
     );
@@ -43,7 +48,7 @@ export default function CanvasArea({ activeSetId, activePageId, pages, status })
     return (
       <div className={styles.canvas}>
         <div className={styles.emptyState}>
-          <p>Loading pages…</p>
+          <p>পেজ লোড হচ্ছে…</p>
         </div>
       </div>
     );
@@ -53,8 +58,8 @@ export default function CanvasArea({ activeSetId, activePageId, pages, status })
     return (
       <div className={styles.canvas}>
         <div className={styles.emptyState}>
-          <p className={styles.emptyStateTitle}>No page selected</p>
-          <p>Add a Bill, Invoice, or Summary page to get started.</p>
+          <p className={styles.emptyStateTitle}>কোনো পেজ নির্বাচিত নেই</p>
+          <p>শুরু করতে একটা বিল, চালান, অথবা সামারি পেজ যোগ করুন।</p>
         </div>
       </div>
     );
