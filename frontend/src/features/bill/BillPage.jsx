@@ -65,6 +65,8 @@ export default function BillPage({
                   type="number"
                   value={line.quantity}
                   onChange={(v) => onLineChange(line.id, "quantity", v)}
+                  align="center"
+                  fill={false}
                 />
               </td>
               <td className={styles.center}>
@@ -72,6 +74,8 @@ export default function BillPage({
                   type="number"
                   value={line.rate}
                   onChange={(v) => onLineChange(line.id, "rate", v)}
+                  align="center"
+                  fill={false}
                 />
               </td>
               <td className={styles.right}>{formatNumber(line.amount)}</td>

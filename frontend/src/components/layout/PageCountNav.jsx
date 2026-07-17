@@ -5,29 +5,26 @@ const TYPE_LABELS = { bill: "বিল", invoice: "চালান", summary: "�
 const TYPE_ORDER = ["bill", "invoice", "summary"];
 
 /**
- * Grouped page-count nav shown in the workspace top bar — "বিল ১ | চালান
- * ১-৩ | সামারি ১". All three type groups (bill/invoice/summary) always
- * render, even at zero pages — each group's button is also the only way to
- * add that page type, so it can never be hidden away. Clicking a group
- * opens a dropdown listing that type's pages by number (1, 2, 3...);
- * clicking a number scrolls the canvas to that page (see CanvasArea's
- * scroll-into-view ref map) and closes the dropdown. Each dropdown also has
- * a "+" to add another page of that type without leaving the top bar, per
- * the "all buttons at top" decision.
+ * Grouped page-count nav shown in the workspace top bar — "বিল ১ | চালান ৩
+ * | সামারি ১". Navigation only now — adding a page moved to PageActionBar,
+ * rendered below each page in CanvasArea, since every new page duplicates a
+ * specific existing page and needs to be anchored to one. All three type
+ * groups always render, even at zero pages, so counts stay visible at a
+ * glance. Clicking a group opens a dropdown listing that type's pages by
+ * number (1, 2, 3...); clicking a number scrolls the canvas to that page
+ * (see CanvasArea's scroll-into-view ref map) and closes the dropdown.
+ *
+ * The count label is just the page count ("বিল ৩"), not a range — a range
+ * like "১-৩" reads oddly at count 1 ("১-১") and doesn't carry more meaning
+ * than a plain count would for this UI.
  *
  * @param {{
  *   pages: import('../../domain/models/Page.js').Page[]|null,
  *   activePageId: string|null,
  *   onJumpToPage: (pageId: string) => void,
- *   onAddPage: (type: "bill"|"invoice"|"summary") => void,
  * }} props
  */
-export default function PageCountNav({
-  pages,
-  activePageId,
-  onJumpToPage,
-  onAddPage,
-}) {
+export default function PageCountNav({ pages, activePageId, onJumpToPage }) {
   const [openGroup, setOpenGroup] = useState(null);
 
   if (!pages) return null;
@@ -41,20 +38,17 @@ export default function PageCountNav({
   return (
     <div className={styles.nav}>
       {grouped.map((group) => (
-        <div key={group.type} style={{ position: "relative" }}>
+        <div key={group.type} className={styles.groupWrapper}>
           <button
             className={`${styles.groupButton} ${openGroup === group.type ? styles.groupButtonActive : ""}`}
             onClick={() =>
               setOpenGroup(openGroup === group.type ? null : group.type)
             }
           >
-            {group.label}{" "}
-            {group.pages.length > 0
-              ? `১-${toBanglaDigits(group.pages.length)}`
-              : "০"}
+            {group.label} {toBanglaDigits(group.pages.length)}
           </button>
 
-          {openGroup === group.type && (
+          {openGroup === group.type && group.pages.length > 0 && (
             <div className={styles.dropdown}>
               {group.pages.map((page, i) => (
                 <button
@@ -68,15 +62,6 @@ export default function PageCountNav({
                   {toBanglaDigits(i + 1)}
                 </button>
               ))}
-              <button
-                className={styles.addButton}
-                onClick={() => {
-                  onAddPage(group.type);
-                  setOpenGroup(null);
-                }}
-              >
-                + যোগ করুন
-              </button>
             </div>
           )}
         </div>

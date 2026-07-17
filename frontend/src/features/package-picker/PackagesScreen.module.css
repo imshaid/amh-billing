@@ -40,7 +40,7 @@
 .packageRow {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: var(--space-md);
   background: #ffffff;
   border: 1px solid var(--chrome-border);
   border-radius: var(--radius-sm);
@@ -49,6 +49,7 @@
 }
 
 .packageName {
+  flex: 1;
   font-size: 0.9rem;
   color: var(--chrome-text);
 }
@@ -56,4 +57,41 @@
 .packageRate {
   font-size: 0.85rem;
   color: var(--chrome-text-muted);
+  white-space: nowrap;
+}
+
+.packageActions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.editButton {
+  font-family: var(--font-bengali);
+  font-size: 0.78rem;
+  color: var(--chrome-accent);
+  background: none;
+  border: 1px solid var(--chrome-border);
+  border-radius: var(--radius-sm);
+  padding: 4px var(--space-sm);
+  cursor: pointer;
+}
+
+.editButton:hover {
+  border-color: var(--chrome-accent);
+}
+
+.deleteButton {
+  font-family: var(--font-bengali);
+  font-size: 0.78rem;
+  color: #b3261e;
+  background: none;
+  border: 1px solid var(--chrome-border);
+  border-radius: var(--radius-sm);
+  padding: 4px var(--space-sm);
+  cursor: pointer;
+}
+
+.deleteButton:hover {
+  border-color: #b3261e;
 }

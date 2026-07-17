@@ -11,11 +11,10 @@ import styles from "./LandingPage.module.css";
  * itself. See docs/data-model.md for the underlying Set/Page shape that the
  * destination views operate on.
  *
- * "নতুন সেশন" creates a bare Set the same way Sidebar's own button used to
- * (see Sidebar.jsx's doc comment — the real session-creation modal in
- * features/session/ is still not built) and jumps straight into the
- * workspace with it active via OPEN_SESSION, skipping the extra step of
- * landing in the workspace with nothing selected.
+ * "নতুন সেশন" creates a bare Set and jumps straight into the workspace with
+ * it active via OPEN_SESSION, skipping the extra step of landing in the
+ * workspace with nothing selected. The real session-creation modal
+ * (choosing how many Bill/Invoice/Summary pages) is still not built.
  *
  * "আগের সেশনসমূহ" and "প্যাকেজ" route to features/session/ and a package
  * manager respectively — both still unbuilt, so for now they just switch
@@ -55,7 +54,7 @@ export default function LandingPage() {
         <FeatureCard
           icon="📦"
           title="প্যাকেজ"
-          description="মেনু প্যাকেজ দেখুন ও সম্পাদনা করুন"
+          description="মেনু প্যাকেজ দেখুন ও এডিট করুন"
           onClick={() => dispatch({ type: "SET_VIEW", payload: "packages" })}
         />
         <FeatureCard

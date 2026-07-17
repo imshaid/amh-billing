@@ -27,6 +27,7 @@
 
 .table {
   width: 100%;
+  table-layout: fixed;
   border-collapse: collapse;
   margin-top: 6px;
   font-size: 13.5px;

@@ -22,6 +22,30 @@
   margin-bottom: var(--space-xs);
 }
 
+.emptyStateActions {
+  display: flex;
+  gap: var(--space-sm);
+  justify-content: center;
+  margin-top: var(--space-md);
+  flex-wrap: wrap;
+}
+
+.emptyStateButton {
+  font-family: var(--font-bengali);
+  font-size: 0.85rem;
+  color: var(--chrome-accent);
+  background: #ffffff;
+  border: 1px solid var(--chrome-border);
+  border-radius: var(--radius-sm);
+  padding: 6px var(--space-md);
+  cursor: pointer;
+}
+
+.emptyStateButton:hover {
+  border-color: var(--chrome-accent);
+  background: var(--chrome-accent-bg);
+}
+
 .pageWrapper {
   /* The bill/invoice preview's own personality (brand-blue, contoured
      Bengali headline, etc — see DocumentHeader.module.css) lives entirely
@@ -32,4 +56,15 @@
     0 1px 4px rgba(0, 0, 0, 0.08),
     0 1px 2px rgba(0, 0, 0, 0.06);
   max-width: 100%;
+  /* `zoom` (not `transform: scale`) is used for the zoom level — see
+     WorkspaceView's ZoomControl/useZoom — specifically because `zoom`
+     affects layout (the element's box actually shrinks, so surrounding
+     flex/gap spacing and horizontal scroll extents stay correct), whereas
+     `transform: scale` leaves the original layout box untouched and would
+     need extra negative-margin math to avoid dead whitespace around a
+     zoomed-out page. `zoom` is non-standard but shipped in every
+     Chromium/WebKit browser (Chrome, Edge, Safari 15.4+); this app is
+     explicitly modeled after Chrome's own PDF viewer, so the same browser
+     family is the primary target.
+  */
 }

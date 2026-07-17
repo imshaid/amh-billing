@@ -1,0 +1,63 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 60;
+  padding: var(--space-lg);
+}
+
+.dialog {
+  background: #ffffff;
+  border-radius: var(--radius-md);
+  padding: var(--space-lg);
+  max-width: 380px;
+  width: 100%;
+  font-family: var(--font-bengali);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+}
+
+.message {
+  font-size: 0.95rem;
+  color: var(--chrome-text);
+  margin: 0 0 var(--space-lg) 0;
+  line-height: 1.5;
+}
+
+.buttonRow {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-sm);
+}
+
+.cancelButton {
+  font-family: var(--font-bengali);
+  font-size: 0.85rem;
+  color: var(--chrome-text);
+  background: none;
+  border: 1px solid var(--chrome-border);
+  border-radius: var(--radius-sm);
+  padding: 6px var(--space-md);
+  cursor: pointer;
+}
+
+.cancelButton:hover {
+  border-color: var(--chrome-accent);
+}
+
+.confirmButton {
+  font-family: var(--font-bengali);
+  font-size: 0.85rem;
+  color: #ffffff;
+  background: #b3261e;
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 6px var(--space-md);
+  cursor: pointer;
+}
+
+.confirmButton:hover {
+  background: #8f1f19;
+}

@@ -1,25 +1,45 @@
+import { useState } from "react";
 import { usePackages } from "../../hooks/usePackages.js";
+import { updatePackage, deletePackage } from "../../db/packages.repository.js";
+import PackageEditModal from "./PackageEditModal.jsx";
+import ConfirmDialog from "../shared/ConfirmDialog.jsx";
 import styles from "./PackagesScreen.module.css";
 
 /**
- * Reached from the landing page's "প্যাকেজ" card. Currently read-only —
- * reuses `usePackages` (the same grouping hook PackagesTab uses inside the
- * workspace) to list every seeded Package by category. A full CRUD editor
- * (create/edit/delete a Package, per docs/data-model.md's "Packages are
- * user-editable") is separate, not-yet-built work; this screen exists so
- * the landing page's card has a real destination in the meantime rather
- * than a dead placeholder, and the create/edit UI can be added here later
- * without changing where this screen lives.
+ * Reached from the landing page's "প্যাকেজ" card. Lists every seeded
+ * Package by category (via `usePackages`, the same grouping hook the
+ * package-picker popup uses in the workspace) with per-package "এডিট" and
+ * "ডিলিট" buttons. "এডিট" opens PackageEditModal (name/category/rate/items);
+ * "ডিলিট" opens a ConfirmDialog before actually removing the package, per
+ * the "confirm before any delete" requirement.
+ *
+ * Editing/deleting a Package never touches pages that already snapshotted
+ * its items onto a line — see Snapshot Policy in docs/data-model.md — only
+ * future "+ যোগ করুন" picks are affected.
  */
 export default function PackagesScreen() {
-  const { groupedPackages, status } = usePackages();
+  const { groupedPackages, status, refresh } = usePackages();
+  const [editingPkg, setEditingPkg] = useState(null);
+  const [deletingPkg, setDeletingPkg] = useState(null);
+
+  async function handleSaveEdit(changes) {
+    if (!editingPkg) return;
+    await updatePackage(editingPkg.id, changes);
+    await refresh();
+    setEditingPkg(null);
+  }
+
+  async function handleConfirmDelete() {
+    if (!deletingPkg) return;
+    await deletePackage(deletingPkg.id);
+    await refresh();
+    setDeletingPkg(null);
+  }
 
   return (
     <div className={styles.screen}>
       <h2 className={styles.heading}>প্যাকেজ</h2>
-      <p className={styles.subheading}>
-        হোটেলের মেনু প্যাকেজের তালিকা। সম্পাদনার সুবিধা শীঘ্রই আসছে।
-      </p>
+      <p className={styles.subheading}>হোটেলের মেনু প্যাকেজের তালিকা।</p>
 
       {status === "loading" && <p className={styles.subheading}>লোড হচ্ছে…</p>}
 
@@ -34,11 +54,43 @@ export default function PackagesScreen() {
                   <span className={styles.packageRate}>
                     {pkg.rate != null ? `৳${pkg.rate}` : "রেট নেই"}
                   </span>
+                  <span className={styles.packageActions}>
+                    <button
+                      type="button"
+                      className={styles.editButton}
+                      onClick={() => setEditingPkg(pkg)}
+                    >
+                      এডিট
+                    </button>
+                    <button
+                      type="button"
+                      className={styles.deleteButton}
+                      onClick={() => setDeletingPkg(pkg)}
+                    >
+                      ডিলিট
+                    </button>
+                  </span>
                 </div>
               ))}
             </div>
           </div>
         ))}
+
+      {editingPkg && (
+        <PackageEditModal
+          pkg={editingPkg}
+          onSave={handleSaveEdit}
+          onCancel={() => setEditingPkg(null)}
+        />
+      )}
+
+      {deletingPkg && (
+        <ConfirmDialog
+          message={`"${deletingPkg.name}" প্যাকেজটা ডিলিট করতে চান? এটা আর ফেরানো যাবে না।`}
+          onConfirm={handleConfirmDelete}
+          onCancel={() => setDeletingPkg(null)}
+        />
+      )}
     </div>
   );
 }

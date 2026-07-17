@@ -1,5 +1,6 @@
 import styles from "./DocumentHeader.module.css";
 import EditableField from "./EditableField.jsx";
+import DateField from "./DateField.jsx";
 
 import logo from "../../assets/images/logo.png";
 import goat from "../../assets/images/goat.png";
@@ -14,11 +15,14 @@ import fish from "../../assets/images/fish.png";
  * ("ক্রমিক" / "Log Code") differ between page types, so those are the only
  * two things this component parameterizes.
  *
- * Meta box fields (buyerName/serialOrLogCode/address/date) are inline
- * editable via EditableField — `onFieldChange(field, value)` is called with
- * debounced auto-save already handled inside EditableField; this component
- * just forwards which field changed up to whoever owns the write (see
- * CanvasArea, which calls `updateDraftPage`).
+ * Meta box fields: buyerName/address use EditableField with
+ * `autocompleteField` on (suggestions from every past session — see
+ * useFieldHistory), serialOrLogCode uses plain EditableField (a log code is
+ * rarely reused verbatim), and date uses the dedicated DateField (dd/mm/yyyy
+ * display + calendar popup, not the native `<input type="date">`).
+ * `onFieldChange(field, value)` is called on debounced commit; this
+ * component just forwards which field changed up to whoever owns the write
+ * (see CanvasArea, which calls `updateDraftPage`).
  *
  * Pulled out of BillPage so the hard-won visual fixes (dotted underline
  * rendering, hero-row layout, hotel-name overflow, etc — see project
@@ -85,6 +89,7 @@ export default function DocumentHeader({
               <EditableField
                 value={page.buyerName}
                 onChange={(v) => onFieldChange("buyerName", v)}
+                autocompleteField="buyerName"
               />
             </span>
           </span>
@@ -105,14 +110,14 @@ export default function DocumentHeader({
               <EditableField
                 value={page.address}
                 onChange={(v) => onFieldChange("address", v)}
+                autocompleteField="address"
               />
             </span>
           </span>
           <span className={styles.metaRowRight}>
             <strong>তারিখ:</strong>
             <span className={styles.valueLine}>
-              <EditableField
-                type="date"
+              <DateField
                 value={page.date}
                 onChange={(v) => onFieldChange("date", v)}
               />

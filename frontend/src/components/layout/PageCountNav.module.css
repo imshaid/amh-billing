@@ -1,6 +1,9 @@
 .nav {
   display: flex;
   gap: var(--space-sm);
+}
+
+.groupWrapper {
   position: relative;
 }
 
@@ -24,7 +27,8 @@
 .dropdown {
   position: absolute;
   top: calc(100% + 4px);
-  left: 0;
+  left: 50%;
+  transform: translateX(-50%);
   background: #ffffff;
   border: 1px solid var(--chrome-border);
   border-radius: var(--radius-sm);
@@ -55,23 +59,5 @@
 .dropdownItemActive {
   background: var(--chrome-accent-bg);
   border-color: var(--chrome-accent);
-  color: var(--chrome-accent);
-}
-
-.addButton {
-  font-family: var(--font-bengali);
-  font-size: 0.8rem;
-  color: var(--chrome-text-muted);
-  background: none;
-  border: none;
-  width: 100%;
-  text-align: center;
-  padding: 4px 0;
-  margin-top: 4px;
-  border-top: 1px solid var(--chrome-border);
-  cursor: pointer;
-}
-
-.addButton:hover {
   color: var(--chrome-accent);
 }

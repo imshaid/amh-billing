@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { getAllPackages } from "../db/packages.repository.js";
 
 /** Display order for grouping — categories not in this list (i.e. `null`,
@@ -40,13 +40,17 @@ export function usePackages() {
   const [groupedPackages, setGroupedPackages] = useState([]);
   const [status, setStatus] = useState("loading");
   const [error, setError] = useState(null);
+  const hasLoadedOnceRef = useRef(false);
 
   async function refresh() {
     try {
-      setStatus("loading");
+      if (!hasLoadedOnceRef.current) {
+        setStatus("loading");
+      }
       const all = await getAllPackages();
       setGroupedPackages(groupByCategory(all));
       setStatus("ready");
+      hasLoadedOnceRef.current = true;
     } catch (err) {
       console.error("[usePackages] failed to load packages:", err);
       setError(err.message);

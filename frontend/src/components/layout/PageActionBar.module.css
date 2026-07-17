@@ -1,0 +1,41 @@
+.bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+  padding: var(--space-sm) 0;
+  flex-wrap: wrap;
+}
+
+.addButton {
+  font-family: var(--font-bengali);
+  font-size: 0.82rem;
+  color: var(--chrome-accent);
+  background: #ffffff;
+  border: 1px solid var(--chrome-border);
+  border-radius: var(--radius-sm);
+  padding: 6px var(--space-md);
+  cursor: pointer;
+}
+
+.addButton:hover {
+  border-color: var(--chrome-accent);
+  background: var(--chrome-accent-bg);
+}
+
+.deleteButton {
+  font-family: var(--font-bengali);
+  font-size: 0.82rem;
+  color: #b3261e;
+  background: #ffffff;
+  border: 1px solid var(--chrome-border);
+  border-radius: var(--radius-sm);
+  padding: 6px var(--space-md);
+  cursor: pointer;
+  margin-left: var(--space-md);
+}
+
+.deleteButton:hover {
+  border-color: #b3261e;
+  background: #fdecea;
+}

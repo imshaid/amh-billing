@@ -1,9 +1,9 @@
 import { useRef } from "react";
 import { useAppState } from "../../state/useAppState.js";
 import { usePages } from "../../hooks/usePages.js";
-import { addPage } from "../../db/pages.repository.js";
-import { resyncSetPageOrder } from "../../db/sets.repository.js";
+import { useZoom } from "../../hooks/useZoom.js";
 import PageCountNav from "./PageCountNav.jsx";
+import ZoomControl from "./ZoomControl.jsx";
 import CanvasArea from "./CanvasArea.jsx";
 import styles from "./WorkspaceView.module.css";
 
@@ -16,11 +16,19 @@ import styles from "./WorkspaceView.module.css";
  * list UI here at all — only the one Set the user opened (via "নতুন সেশন" or
  * "আগের সেশনসমূহ" on the landing page) is ever shown, and returning to a
  * *different* Set means going back to the landing page's Previous Sessions
- * screen, not switching within this view. All controls live in the workspace
- * top strip: PageCountNav (grouped বিল/চালান/সামারি counts + jump dropdown +
- * add-page) and "শেষ করুন" (just returns to landing — GO_HOME — since every
- * edit already auto-saves via CanvasArea's debounced writes, there is
- * nothing left to persist on exit).
+ * screen, not switching within this view.
+ *
+ * The top strip holds PageCountNav (grouped বিল/চালান/সামারি counts + jump
+ * dropdown — navigation, not creation), ZoomControl (pages stay fixed at
+ * real A4 size — see useZoom's doc comment — so small screens zoom out
+ * rather than the layout reflowing), and "শেষ করুন" (returns to landing;
+ * every edit already auto-saves via CanvasArea's debounced writes, so there
+ * is nothing left to persist on exit). Adding a page lives in
+ * PageActionBar, rendered below each page in CanvasArea — every new page
+ * duplicates a specific existing page, so the action needs to be anchored
+ * to one; the one exception is the very first page in an empty Set, which
+ * CanvasArea's own empty-state offers directly since there is nothing yet
+ * to duplicate from.
  *
  * `usePages` is called ONCE here, not inside CanvasArea, so a write from
  * inline editing or the package-picker popup (both happen inside
@@ -32,40 +40,43 @@ export default function WorkspaceView() {
   const { pages, status, refresh } = usePages(state.activeSetId);
   const scrollApiRef = useRef(null);
 
-  async function handleAddPage(type) {
-    if (!state.activeSetId) return;
-    const page = await addPage({ setId: state.activeSetId, type });
-    await resyncSetPageOrder(state.activeSetId);
-    await refresh();
-    // Scroll to the newly created page once it's rendered. A microtask
-    // delay isn't enough here — CanvasArea needs to actually re-render with
-    // the new page before its ref exists, so this waits a tick via
-    // requestAnimationFrame rather than scrolling to a ref that isn't
-    // registered yet.
-    requestAnimationFrame(() => {
-      dispatch({ type: "SET_ACTIVE_PAGE", payload: page.id });
-      scrollApiRef.current?.scrollToPage(page.id);
-    });
-  }
+  // Narrow screens start already zoomed out, rather than the user having to
+  // manually zoom out from 100% on first load just to see the A4-fixed page
+  // at all (see useZoom's own doc comment on why the page itself doesn't
+  // reflow). 480px is a rough "phone-width" cutoff, not tied to
+  // --breakpoint-mobile (768px) since this needs a narrower threshold than
+  // the sidebar/topbar layout breakpoint.
+  const initialZoom =
+    typeof window !== "undefined" && window.innerWidth < 480 ? 0.5 : 1;
+  const { zoom, zoomIn, zoomOut, resetZoom } = useZoom(initialZoom);
 
   return (
     <div className={styles.shell}>
       <div className={styles.topStrip}>
-        <PageCountNav
-          pages={pages}
-          activePageId={state.activePageId}
-          onJumpToPage={(pageId) => {
-            dispatch({ type: "SET_ACTIVE_PAGE", payload: pageId });
-            scrollApiRef.current?.scrollToPage(pageId);
-          }}
-          onAddPage={handleAddPage}
-        />
-        <button
-          className={styles.doneButton}
-          onClick={() => dispatch({ type: "GO_HOME" })}
-        >
-          শেষ করুন
-        </button>
+        <div className={styles.navSlot}>
+          <PageCountNav
+            pages={pages}
+            activePageId={state.activePageId}
+            onJumpToPage={(pageId) => {
+              dispatch({ type: "SET_ACTIVE_PAGE", payload: pageId });
+              scrollApiRef.current?.scrollToPage(pageId);
+            }}
+          />
+        </div>
+        <div className={styles.rightSlot}>
+          <ZoomControl
+            zoom={zoom}
+            onZoomIn={zoomIn}
+            onZoomOut={zoomOut}
+            onReset={resetZoom}
+          />
+          <button
+            className={styles.doneButton}
+            onClick={() => dispatch({ type: "GO_HOME" })}
+          >
+            শেষ করুন
+          </button>
+        </div>
       </div>
 
       <CanvasArea
@@ -73,6 +84,7 @@ export default function WorkspaceView() {
         pages={pages}
         status={status}
         refreshPages={refresh}
+        zoom={zoom}
         registerScrollApi={(api) => {
           scrollApiRef.current = api;
         }}

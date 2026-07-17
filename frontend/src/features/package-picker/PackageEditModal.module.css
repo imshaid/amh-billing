@@ -1,0 +1,141 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 55;
+  padding: var(--space-lg);
+}
+
+.modal {
+  background: #ffffff;
+  border-radius: var(--radius-md);
+  padding: var(--space-lg);
+  max-width: 480px;
+  width: 100%;
+  max-height: 85vh;
+  overflow-y: auto;
+  font-family: var(--font-bengali);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+}
+
+.heading {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0 0 var(--space-md) 0;
+  color: var(--chrome-text);
+}
+
+.field {
+  margin-bottom: var(--space-md);
+}
+
+.label {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--chrome-text-muted);
+  margin-bottom: 4px;
+}
+
+.input,
+.select {
+  width: 100%;
+  box-sizing: border-box;
+  font-family: var(--font-bengali);
+  font-size: 0.9rem;
+  padding: var(--space-sm) var(--space-md);
+  border: 1px solid var(--chrome-border);
+  border-radius: var(--radius-sm);
+}
+
+.input:focus,
+.select:focus {
+  outline: none;
+  border-color: var(--chrome-accent);
+}
+
+.itemRow {
+  display: flex;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-sm);
+}
+
+.itemInput {
+  flex: 1;
+  box-sizing: border-box;
+  font-family: var(--font-bengali);
+  font-size: 0.85rem;
+  padding: 6px var(--space-sm);
+  border: 1px solid var(--chrome-border);
+  border-radius: var(--radius-sm);
+}
+
+.itemInput:focus {
+  outline: none;
+  border-color: var(--chrome-accent);
+}
+
+.removeItemButton {
+  font-size: 0.85rem;
+  color: #b3261e;
+  background: none;
+  border: 1px solid var(--chrome-border);
+  border-radius: var(--radius-sm);
+  width: 32px;
+  cursor: pointer;
+}
+
+.removeItemButton:hover {
+  border-color: #b3261e;
+}
+
+.addItemButton {
+  font-family: var(--font-bengali);
+  font-size: 0.8rem;
+  color: var(--chrome-accent);
+  background: none;
+  border: 1px dashed var(--chrome-border);
+  border-radius: var(--radius-sm);
+  padding: 4px var(--space-md);
+  cursor: pointer;
+}
+
+.addItemButton:hover {
+  border-color: var(--chrome-accent);
+}
+
+.buttonRow {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-sm);
+  margin-top: var(--space-lg);
+}
+
+.cancelButton {
+  font-family: var(--font-bengali);
+  font-size: 0.85rem;
+  color: var(--chrome-text);
+  background: none;
+  border: 1px solid var(--chrome-border);
+  border-radius: var(--radius-sm);
+  padding: 6px var(--space-md);
+  cursor: pointer;
+}
+
+.saveButton {
+  font-family: var(--font-bengali);
+  font-size: 0.85rem;
+  color: #ffffff;
+  background: var(--chrome-accent);
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 6px var(--space-md);
+  cursor: pointer;
+}
+
+.saveButton:hover {
+  background: var(--chrome-accent-hover);
+}

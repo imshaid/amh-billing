@@ -1,5 +1,14 @@
-.field {
+.wrapper {
+  position: relative;
   display: inline-block;
+}
+
+.wrapper[data-fill] {
+  display: block;
+  width: 100%;
+}
+
+.field {
   min-width: 40px;
   border: none;
   border-bottom: 1px dashed transparent;
@@ -7,6 +16,17 @@
   font: inherit;
   color: inherit;
   padding: 0 2px;
+  text-align: left;
+}
+
+.field[data-fill] {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.field[data-align="center"] {
+  text-align: center;
 }
 
 .field:hover {
@@ -17,4 +37,39 @@
   outline: none;
   border-bottom: 1px solid var(--chrome-accent);
   background: var(--chrome-accent-bg);
+}
+
+.dropdown {
+  position: absolute;
+  top: calc(100% + 2px);
+  left: 0;
+  right: 0;
+  background: #ffffff;
+  border: 1px solid var(--chrome-border);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+  z-index: 45;
+  display: flex;
+  flex-direction: column;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.dropdownItem {
+  text-align: left;
+  font: inherit;
+  font-size: 0.85rem;
+  padding: 6px 10px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--chrome-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dropdownItem:hover {
+  background: var(--chrome-accent-bg);
+  color: var(--chrome-accent);
 }
