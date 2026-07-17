@@ -1,4 +1,5 @@
 import styles from "./DocumentHeader.module.css";
+import EditableField from "./EditableField.jsx";
 
 import logo from "../../assets/images/logo.png";
 import goat from "../../assets/images/goat.png";
@@ -13,6 +14,12 @@ import fish from "../../assets/images/fish.png";
  * ("ক্রমিক" / "Log Code") differ between page types, so those are the only
  * two things this component parameterizes.
  *
+ * Meta box fields (buyerName/serialOrLogCode/address/date) are inline
+ * editable via EditableField — `onFieldChange(field, value)` is called with
+ * debounced auto-save already handled inside EditableField; this component
+ * just forwards which field changed up to whoever owns the write (see
+ * CanvasArea, which calls `updateDraftPage`).
+ *
  * Pulled out of BillPage so the hard-won visual fixes (dotted underline
  * rendering, hero-row layout, hotel-name overflow, etc — see project
  * history) live in exactly one place and apply to every page type at once.
@@ -21,9 +28,15 @@ import fish from "../../assets/images/fish.png";
  *   bannerText: string,
  *   page: import('../../domain/models/Page.js').Page,
  *   rightFieldLabel: string,
+ *   onFieldChange: (field: "buyerName"|"address"|"date"|"serialOrLogCode", value: string) => void,
  * }} props
  */
-export default function DocumentHeader({ bannerText, page, rightFieldLabel }) {
+export default function DocumentHeader({
+  bannerText,
+  page,
+  rightFieldLabel,
+  onFieldChange,
+}) {
   return (
     <>
       <div className={styles.headerBar}>
@@ -68,21 +81,42 @@ export default function DocumentHeader({ bannerText, page, rightFieldLabel }) {
         <div className={styles.metaRow}>
           <span className={styles.metaRowLeft}>
             <strong>ক্রেতার নাম:</strong>
-            <span className={styles.valueLine}>{page.buyerName}</span>
+            <span className={styles.valueLine}>
+              <EditableField
+                value={page.buyerName}
+                onChange={(v) => onFieldChange("buyerName", v)}
+              />
+            </span>
           </span>
           <span className={styles.metaRowRight}>
             <strong>{rightFieldLabel}:</strong>
-            <span className={styles.valueLine}>{page.serialOrLogCode}</span>
+            <span className={styles.valueLine}>
+              <EditableField
+                value={page.serialOrLogCode}
+                onChange={(v) => onFieldChange("serialOrLogCode", v)}
+              />
+            </span>
           </span>
         </div>
         <div className={styles.metaRow}>
           <span className={styles.metaRowLeft}>
             <strong>ঠিকানা:</strong>
-            <span className={styles.valueLine}>{page.address}</span>
+            <span className={styles.valueLine}>
+              <EditableField
+                value={page.address}
+                onChange={(v) => onFieldChange("address", v)}
+              />
+            </span>
           </span>
           <span className={styles.metaRowRight}>
             <strong>তারিখ:</strong>
-            <span className={styles.valueLine}>{page.date}</span>
+            <span className={styles.valueLine}>
+              <EditableField
+                type="date"
+                value={page.date}
+                onChange={(v) => onFieldChange("date", v)}
+              />
+            </span>
           </span>
         </div>
       </div>

@@ -1,0 +1,20 @@
+.field {
+  display: inline-block;
+  min-width: 40px;
+  border: none;
+  border-bottom: 1px dashed transparent;
+  background: transparent;
+  font: inherit;
+  color: inherit;
+  padding: 0 2px;
+}
+
+.field:hover {
+  border-bottom-color: var(--chrome-border);
+}
+
+.field:focus {
+  outline: none;
+  border-bottom: 1px solid var(--chrome-accent);
+  background: var(--chrome-accent-bg);
+}

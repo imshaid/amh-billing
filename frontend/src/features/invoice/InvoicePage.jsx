@@ -1,4 +1,5 @@
 import DocumentHeader from "../shared/DocumentHeader.jsx";
+import EditableField from "../shared/EditableField.jsx";
 import styles from "./InvoicePage.module.css";
 
 /**
@@ -13,18 +14,31 @@ import styles from "./InvoicePage.module.css";
  * docs/data-model.md "Summary Page" — with buyerName/address/date/
  * serialOrLogCode left blank by default and quantity values that are
  * live-aggregated from the Set's Invoice pages rather than typed in
- * directly. That aggregation happens before this component ever sees the
- * Page, so no separate SummaryPage markup is needed.
+ * directly. `onFieldChange`/`onLineChange`/`onAddRow` are still passed for
+ * a Summary page (its quantity overrides use the same onLineChange path —
+ * see useActivePage's summary aggregation for how `quantityIsOverridden`
+ * is respected).
  *
- * @param {{ page: import('../../domain/models/Page.js').Page }} props
+ * @param {{
+ *   page: import('../../domain/models/Page.js').Page,
+ *   onFieldChange: (field: string, value: string) => void,
+ *   onLineChange: (lineId: string, field: "quantity"|"rate", value: string) => void,
+ *   onAddRow: () => void,
+ * }} props
  */
-export default function InvoicePage({ page }) {
+export default function InvoicePage({
+  page,
+  onFieldChange,
+  onLineChange,
+  onAddRow,
+}) {
   return (
     <div className={styles.page}>
       <DocumentHeader
         bannerText="চালান"
         page={page}
         rightFieldLabel="Log Code"
+        onFieldChange={onFieldChange}
       />
 
       <table className={styles.table}>
@@ -48,9 +62,26 @@ export default function InvoicePage({ page }) {
                   ))}
                 </ol>
               </td>
-              <td className={styles.center}>{line.quantity ?? ""}</td>
+              <td className={styles.center}>
+                <EditableField
+                  type="number"
+                  value={line.quantity}
+                  onChange={(v) => onLineChange(line.id, "quantity", v)}
+                />
+              </td>
             </tr>
           ))}
+          <tr>
+            <td colSpan={4} className={styles.addRowCell}>
+              <button
+                type="button"
+                className={styles.addRowButton}
+                onClick={onAddRow}
+              >
+                + যোগ করুন
+              </button>
+            </td>
+          </tr>
         </tbody>
       </table>
 

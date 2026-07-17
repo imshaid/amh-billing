@@ -3,17 +3,14 @@ import styles from "./GlobalTopBar.module.css";
 
 /**
  * Persistent top bar shown on every screen (landing, workspace, previous
- * sessions, packages, analytics) — not just mobile. This replaces the
- * earlier mobile-only MobileTopBar: the "AMH Billing" title now doubles as
- * the Home button on every breakpoint (per the decision to make Home
- * always-visible rather than tucked into the Sidebar), and the hamburger
- * (still mobile-only, still opens the Sidebar drawer) lives here instead of
- * its own component since both belong to the same persistent strip.
+ * sessions, packages, analytics). The "আদর্শ মুন্সির হোটেল — বিলিং" title
+ * doubles as the Home button on every screen (GO_HOME).
  *
- * The active session name only renders while `currentView === "workspace"`
- * and a Set is actually selected — on "landing" there's nothing to show,
- * and showing a stale name on other screens (previousSessions/packages/
- * analytics) would misleadingly imply that Set is still "current".
+ * No hamburger/drawer here anymore — the workspace no longer has a Sidebar
+ * (see WorkspaceView's doc comment: only one Set is ever open at a time,
+ * switching Sets means returning to the landing page's Previous Sessions
+ * screen). WorkspaceView's own top strip (PageCountNav + শেষ করুন) handles
+ * everything that used to require a drawer trigger.
  *
  * @param {{ activeSetName?: string|null }} props
  */
@@ -22,18 +19,6 @@ export default function GlobalTopBar({ activeSetName }) {
 
   return (
     <div className={styles.topBar}>
-      {state.currentView === "workspace" && (
-        <button
-          className={styles.hamburgerButton}
-          onClick={() => dispatch({ type: "OPEN_SIDEBAR_DRAWER" })}
-          aria-label="সেশন তালিকা খুলুন"
-        >
-          <span />
-          <span />
-          <span />
-        </button>
-      )}
-
       <button
         className={styles.homeButton}
         onClick={() => dispatch({ type: "GO_HOME" })}

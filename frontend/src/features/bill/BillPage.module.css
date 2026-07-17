@@ -89,6 +89,26 @@
   margin: 3.5px 0;
 }
 
+.addRowCell {
+  padding: 4px 8px;
+}
+
+.addRowButton {
+  font-family: var(--font-bengali, inherit);
+  font-size: 0.8rem;
+  color: var(--chrome-accent);
+  background: none;
+  border: 1px dashed var(--chrome-border);
+  border-radius: 4px;
+  padding: 3px 10px;
+  cursor: pointer;
+}
+
+.addRowButton:hover {
+  border-color: var(--chrome-accent);
+  background: var(--chrome-accent-bg);
+}
+
 .totalLabel {
   font-weight: 700;
   font-family: var(--font-bengali);

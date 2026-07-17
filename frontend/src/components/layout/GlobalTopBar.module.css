@@ -42,31 +42,9 @@
   max-width: 200px;
 }
 
-.hamburgerButton {
-  background: none;
-  border: none;
-  padding: var(--space-xs);
-  cursor: pointer;
-  display: none;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.hamburgerButton span {
-  display: block;
-  width: 20px;
-  height: 2px;
-  background: var(--chrome-text);
-  border-radius: 1px;
-}
-
-/* NOTE: literal copy of --breakpoint-mobile — see AppShell.module.css. */
+/* NOTE: literal copy of --breakpoint-mobile — see WorkspaceView.module.css. */
 @media (max-width: 768px) {
-  .hamburgerButton {
-    display: flex;
-  }
-
   .activeSessionName {
-    display: none; /* not enough room next to the hamburger on small screens */
+    display: none; /* not enough room on small screens next to the title */
   }
 }

@@ -1,0 +1,77 @@
+.nav {
+  display: flex;
+  gap: var(--space-sm);
+  position: relative;
+}
+
+.groupButton {
+  font-family: var(--font-bengali);
+  font-size: 0.85rem;
+  color: var(--chrome-text);
+  background: none;
+  border: 1px solid var(--chrome-border);
+  border-radius: var(--radius-sm);
+  padding: 4px var(--space-sm);
+  cursor: pointer;
+}
+
+.groupButton:hover,
+.groupButtonActive {
+  border-color: var(--chrome-accent);
+  color: var(--chrome-accent);
+}
+
+.dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  background: #ffffff;
+  border: 1px solid var(--chrome-border);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: var(--space-sm);
+  min-width: 140px;
+  z-index: 40;
+}
+
+.dropdownItem {
+  font-size: 0.8rem;
+  color: var(--chrome-text);
+  background: var(--chrome-bg);
+  border: 1px solid transparent;
+  border-radius: 4px;
+  width: 28px;
+  height: 28px;
+  cursor: pointer;
+}
+
+.dropdownItem:hover {
+  border-color: var(--chrome-accent);
+}
+
+.dropdownItemActive {
+  background: var(--chrome-accent-bg);
+  border-color: var(--chrome-accent);
+  color: var(--chrome-accent);
+}
+
+.addButton {
+  font-family: var(--font-bengali);
+  font-size: 0.8rem;
+  color: var(--chrome-text-muted);
+  background: none;
+  border: none;
+  width: 100%;
+  text-align: center;
+  padding: 4px 0;
+  margin-top: 4px;
+  border-top: 1px solid var(--chrome-border);
+  cursor: pointer;
+}
+
+.addButton:hover {
+  color: var(--chrome-accent);
+}

@@ -1,39 +1,39 @@
 /*
- * Desktop: Sidebar is a fixed left column; CanvasArea + BottomPanel stack
- * in the remaining space, BottomPanel docked to the bottom.
- * Mobile (<768px): Sidebar becomes an off-canvas drawer (see Sidebar.jsx)
- * and the grid-template-columns swap removes its column — no JS layout
- * branching needed for that part.
- *
- * `height: 100%` (not 100vh) — this view now renders below the persistent
- * GlobalTopBar (see App.jsx), which already reserves `--mobile-topbar-height`
- * at the App root. Using 100vh here would overflow the viewport by that
- * same amount.
+ * No Sidebar, no BottomPanel — just a top strip (PageCountNav + Done button)
+ * and CanvasArea filling the rest. `height: 100%` (not 100vh) since this
+ * renders below the persistent GlobalTopBar in App.jsx, which already
+ * reserves `--mobile-topbar-height` at the App root.
  */
 
 .shell {
-  display: grid;
-  grid-template-columns: var(--sidebar-width) 1fr;
-  grid-template-rows: 1fr;
+  display: flex;
+  flex-direction: column;
   height: 100%;
-  background: var(--chrome-bg);
-  color: var(--chrome-text);
-  font-family: var(--font-ui);
-}
-
-.mainColumn {
-  display: grid;
-  grid-template-rows: 1fr var(--bottom-panel-height);
-  min-width: 0; /* allow CanvasArea to shrink/scroll instead of overflowing the grid */
   min-height: 0;
 }
 
-/* NOTE: CSS custom properties can't be read inside @media conditions, so
-   this 768px is a literal copy of --breakpoint-mobile in tokens.css. If you
-   change one, change the other — every layout/*.module.css file in this
-   folder repeats this same literal for the same reason. */
-@media (max-width: 768px) {
-  .shell {
-    grid-template-columns: 1fr;
-  }
+.topStrip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+  padding: var(--space-sm) var(--space-md);
+  border-bottom: 1px solid var(--chrome-border);
+  background: #ffffff;
+  flex-shrink: 0;
+}
+
+.doneButton {
+  font-family: var(--font-bengali);
+  font-size: 0.85rem;
+  color: #ffffff;
+  background: var(--chrome-accent);
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: var(--space-xs) var(--space-md);
+  cursor: pointer;
+}
+
+.doneButton:hover {
+  background: var(--chrome-accent-hover);
 }

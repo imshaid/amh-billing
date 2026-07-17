@@ -1,32 +1,30 @@
 /**
  * Pure reducer for App-level UI state — NOT persisted data. This only tracks
  * "what is the user currently looking at" (which top-level screen, which Set
- * is open, which Page is active in the canvas, which BottomPanel tab is
- * selected, whether the mobile sidebar drawer is open). The actual Set/Page/
+ * is open, which Page is highlighted in the canvas). The actual Set/Page/
  * Package records themselves live in IndexedDB and are loaded via the hooks
  * in `src/hooks/` — this reducer never holds a copy of that data, only ids
  * and view-mode flags, so there is exactly one source of truth for each
  * kind of thing.
  */
 
-/** @typedef {"packages"|"actions"} BottomTab */
-
 /**
  * @typedef {"landing"|"workspace"|"previousSessions"|"packages"|"analytics"} View
- * "workspace" is the existing Sidebar+CanvasArea+BottomPanel shell (renamed
- * conceptually from "the app" to "one of several screens" now that a
- * landing hub sits in front of it). The other three are the grid cards on
- * the landing page. "landing" itself has no card — it's the home screen the
- * global top bar's title/logo returns to.
+ * "workspace" is the single-session continuous-scroll canvas (see
+ * WorkspaceView.jsx) — there is no Set-switching UI inside it; switching
+ * Sets means returning to "landing" and picking again from "আগের
+ * সেশনসমূহ" (previousSessions). The other two screens (packages, analytics)
+ * are the remaining grid cards on the landing page. "landing" itself has no
+ * card — it's the home screen the global top bar's title returns to.
  */
 
 /**
  * @typedef {Object} AppState
  * @property {View} currentView
  * @property {string|null} activeSetId
- * @property {string|null} activePageId
- * @property {BottomTab} activeBottomTab
- * @property {boolean} isSidebarDrawerOpen   Mobile only; ignored on desktop layout.
+ * @property {string|null} activePageId   Which page is currently scrolled to
+ *   / highlighted in PageCountNav's dropdown — not a "tab selection", just a
+ *   highlight cue, since CanvasArea renders every page at once now.
  */
 
 /** @type {AppState} */
@@ -34,8 +32,6 @@ export const initialAppState = {
   currentView: "landing",
   activeSetId: null,
   activePageId: null,
-  activeBottomTab: "packages",
-  isSidebarDrawerOpen: false,
 };
 
 /**
@@ -52,10 +48,10 @@ export function appReducer(state, action) {
       // Deliberately clears activeSetId/activePageId rather than just
       // switching currentView back to "landing" and leaving them set. If the
       // user picks the same or a different Set from Previous Sessions next,
-      // SET_ACTIVE_SET below runs anyway and would reset activePageId to
-      // null regardless — but leaving a stale activeSetId around while on
-      // the landing screen risks a future card ("Continue last session")
-      // reading it before the user has actually chosen to resume anything.
+      // OPEN_SESSION below runs anyway and would reset activePageId to null
+      // regardless — but leaving a stale activeSetId around while on the
+      // landing screen risks a future card ("Continue last session") reading
+      // it before the user has actually chosen to resume anything.
       return {
         ...state,
         currentView: "landing",
@@ -74,30 +70,8 @@ export function appReducer(state, action) {
         activePageId: null,
       };
 
-    case "SET_ACTIVE_SET":
-      // Switching Sets always clears the active Page — a Page id from the
-      // previous Set has no meaning in the new one, and leaving it set would
-      // let CanvasArea try to render a Page that isn't in this Set's list.
-      return {
-        ...state,
-        activeSetId: action.payload,
-        activePageId: null,
-      };
-
     case "SET_ACTIVE_PAGE":
       return { ...state, activePageId: action.payload };
-
-    case "SET_BOTTOM_TAB":
-      return { ...state, activeBottomTab: action.payload };
-
-    case "OPEN_SIDEBAR_DRAWER":
-      return { ...state, isSidebarDrawerOpen: true };
-
-    case "CLOSE_SIDEBAR_DRAWER":
-      return { ...state, isSidebarDrawerOpen: false };
-
-    case "TOGGLE_SIDEBAR_DRAWER":
-      return { ...state, isSidebarDrawerOpen: !state.isSidebarDrawerOpen };
 
     default:
       // Unknown action types are a programmer error, not a runtime condition
