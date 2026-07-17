@@ -1,0 +1,167 @@
+/*
+ * Shared header styles — used by DocumentHeader.jsx, which every page type
+ * (Bill, Invoice, Summary) renders at the top. Kept in its own module so
+ * page-specific stylesheets (BillPage.module.css, InvoicePage.module.css)
+ * only need to hold table/footer styles that actually differ per page type.
+ */
+
+.headerBar {
+  background: var(--brand-blue);
+  color: #ffffff;
+  text-align: center;
+  padding: 4px 0 0 0;
+  overflow: hidden;
+}
+
+.headerBarText {
+  display: inline-block;
+  font-family: var(--font-bengali);
+  font-weight: 400;
+  font-size: 18px;
+  transform: scaleX(2.2) scaleY(1.2);
+  margin: 0;
+}
+
+.heroRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-top: 0;
+}
+
+.heroLeft,
+.heroRight {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 0 0 auto;
+  width: 90px;
+}
+
+.logo {
+  height: 6.5mm;
+  margin: 8px 0 0 10px;
+}
+
+.goat {
+  height: 28mm;
+  margin: 0 0 0 40px;
+}
+
+.chicken {
+  height: 22mm;
+  margin: 0 0 -8px 0px;
+  padding-top: 6px;
+}
+
+.fish {
+  height: 11mm;
+  margin: 18px 44px 0 0;
+}
+
+.hotelNameWrap {
+  flex: 1 1 auto;
+  overflow: visible;
+  text-align: center;
+  margin: 0;
+}
+
+.hotelName {
+  font-family: var(--font-bengali);
+  font-size: 43px;
+  font-weight: 400;
+  color: var(--brand-blue);
+  margin: 0;
+  white-space: nowrap;
+  display: inline-block;
+  transform: scaleX(1.4) scaleY(1.1);
+  -webkit-text-stroke: 2.6px var(--brand-blue-outline);
+  paint-order: stroke fill;
+}
+
+.proprietorWrap {
+  text-align: center;
+  margin-top: -73px;
+}
+
+.proprietorBadge {
+  display: inline-block;
+  background: var(--brand-blue);
+  color: #ffffff;
+  font-family: var(--font-bengali);
+  font-size: 13px;
+  font-weight: 400;
+  padding: 2px 40px 0px 40px;
+  border-radius: 6px;
+}
+
+.tagline {
+  text-align: center;
+  font-family: var(--font-bengali);
+  font-size: 13px;
+  margin: 1px 0 0 0;
+}
+
+.addressLine,
+.phoneLine {
+  text-align: center;
+  font-family: var(--font-bengali);
+  font-size: 13px;
+  margin: -5px 0 0 0;
+}
+
+.metaBox {
+  background: var(--brand-blue-outline);
+  padding: 4px 14px;
+  font-size: 16px;
+  position: relative;
+  z-index: 1;
+}
+
+.metaRow {
+  display: flex;
+  gap: 16px;
+  padding: 2px 0;
+}
+
+.metaRowLeft {
+  flex: 0 0 68%;
+  display: flex;
+  align-items: flex-end;
+  min-width: 0;
+}
+
+.metaRowRight {
+  flex: 1;
+  display: flex;
+  align-items: flex-end;
+  min-width: 0;
+}
+
+.metaRow strong {
+  font-family: var(--font-bengali);
+  font-weight: 400;
+  white-space: nowrap;
+  flex-shrink: 0;
+  margin-right: 4px;
+  line-height: 1.4;
+}
+
+.valueLine {
+  flex: 1;
+  min-width: 20px;
+  padding-left: 4px;
+  height: 20px;
+  display: flex;
+  align-items: flex-start;
+  background-image: radial-gradient(
+    circle at center,
+    var(--brand-blue) 1.05px,
+    transparent 1.05px
+  );
+  background-repeat: repeat-x;
+  background-position: left 14px;
+  background-size: 4px 4px;
+  white-space: nowrap;
+  overflow: hidden;
+}

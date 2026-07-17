@@ -1,0 +1,80 @@
+/*
+ * InvoicePage layout. Header/hero/meta-box styles are shared with BillPage
+ * via features/shared/DocumentHeader.module.css — only the table (4
+ * columns here, vs Bill's 6 — no rate/amount) and footer are page-specific.
+ */
+
+.page {
+  position: relative;
+  width: 210mm; /* A4 */
+  min-height: 297mm;
+  margin: 0 auto;
+  padding: 12mm;
+  background: #ffffff;
+  box-sizing: border-box;
+  font-family: var(--font-english);
+  color: var(--brand-blue);
+  box-shadow: 0 0 0 1px var(--chrome-border); /* screen-only visual boundary */
+  display: flex;
+  flex-direction: column;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 6px;
+  font-size: 13.5px;
+  position: relative;
+  z-index: 1;
+}
+
+.table th,
+.table td {
+  border: 1px solid var(--brand-blue);
+  padding: 3px 6px;
+  vertical-align: center;
+}
+
+.table thead th {
+  background: #ffffff;
+  font-family: var(--font-english);
+  font-weight: 700;
+  text-align: center;
+}
+
+.colSl {
+  width: 4%;
+}
+.colPackage {
+  width: 15%;
+}
+.colItems {
+  width: 70%;
+}
+.colQty {
+  width: 11%;
+  font-variant-numeric: tabular-nums;
+}
+
+.center {
+  text-align: center;
+}
+
+.itemsList {
+  margin: 0;
+  padding-left: 16px;
+  padding-right: 4px;
+  text-align: justify;
+}
+
+.itemsList li {
+  margin: 3.5px 0;
+}
+
+.signatureRow {
+  display: flex;
+  justify-content: space-between;
+  margin-top: auto;
+  font-weight: 700;
+  font-size: 13px;
+}

@@ -1,0 +1,109 @@
+/*
+ * BillPage layout — matches the hotel's existing printed bill design.
+ * Written as plain CSS (no Tailwind/framework) because this exact markup
+ * will also be rendered headlessly by the PDF service; keeping it
+ * self-contained avoids any dependency the headless renderer wouldn't have.
+ *
+ * Header/hero/meta-box styles (logo, goat, hotel name, chicken, fish,
+ * buyer-info box) live in features/shared/DocumentHeader.module.css since
+ * they're shared with InvoicePage — only Bill-specific table/footer styles
+ * remain here.
+ */
+
+.page {
+  position: relative;
+  width: 210mm; /* A4 */
+  min-height: 297mm;
+  margin: 0 auto;
+  padding: 12mm;
+  background: #ffffff;
+  box-sizing: border-box;
+  font-family: var(--font-english);
+  color: var(--brand-blue);
+  box-shadow: 0 0 0 1px var(--chrome-border); /* screen-only visual boundary */
+  display: flex;
+  flex-direction: column;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 6px;
+  font-size: 13.5px;
+  position: relative;
+  z-index: 1;
+}
+
+.table th,
+.table td {
+  border: 1px solid var(--brand-blue);
+  padding: 3px 6px;
+  vertical-align: center;
+}
+
+.table thead th {
+  background: #ffffff;
+  font-family: var(--font-english);
+  font-weight: 700;
+  text-align: center;
+}
+
+.colSl {
+  width: 4%;
+}
+.colPackage {
+  width: 12%;
+}
+.colItems {
+  width: 55%;
+}
+.colQty {
+  width: 9%;
+  font-variant-numeric: tabular-nums;
+}
+.colRate {
+  width: 8%;
+  font-variant-numeric: tabular-nums;
+}
+.colAmount {
+  width: 12%;
+  font-variant-numeric: tabular-nums;
+}
+
+.center {
+  text-align: center;
+}
+
+.right {
+  text-align: right;
+}
+
+.itemsList {
+  margin: 0;
+  padding-left: 16px;
+  padding-right: 4px;
+  text-align: justify;
+}
+
+.itemsList li {
+  margin: 3.5px 0;
+}
+
+.totalLabel {
+  font-weight: 700;
+  font-family: var(--font-bengali);
+}
+
+.totalAmount {
+  font-weight: 700;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.signatureRow {
+  display: flex;
+  justify-content: space-between;
+  margin-top: auto;
+  font-weight: 700;
+  font-size: 13px;
+}
