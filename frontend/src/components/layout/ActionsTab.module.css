@@ -1,0 +1,92 @@
+.tab {
+  padding: var(--space-md);
+}
+
+.section {
+  margin-bottom: var(--space-lg);
+}
+
+.sectionLabel {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--chrome-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  margin: 0 0 var(--space-sm) 0;
+}
+
+.buttonRow {
+  display: flex;
+  gap: var(--space-sm);
+  flex-wrap: wrap;
+}
+
+.actionButton {
+  font-family: var(--font-ui);
+  font-size: 0.85rem;
+  color: var(--chrome-text);
+  background: #ffffff;
+  border: 1px solid var(--chrome-border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-sm) var(--space-md);
+  cursor: pointer;
+}
+
+.actionButton:hover:not(:disabled) {
+  border-color: var(--chrome-accent);
+  color: var(--chrome-accent);
+}
+
+.actionButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.pageList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.pageRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  padding: var(--space-xs) var(--space-sm);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.pageRow:hover {
+  background: var(--chrome-bg);
+}
+
+.pageRowActive {
+  background: var(--chrome-accent-bg);
+}
+
+.pageRowType {
+  text-transform: capitalize;
+  font-weight: 500;
+}
+
+.pageRowMeta {
+  color: var(--chrome-text-muted);
+  font-size: 0.75rem;
+}
+
+.emptyState {
+  color: var(--chrome-text-muted);
+  font-size: 0.85rem;
+}
+
+.duplicateButton {
+  margin-left: var(--space-sm);
+  padding: 2px var(--space-sm);
+  font-size: 0.75rem;
+}

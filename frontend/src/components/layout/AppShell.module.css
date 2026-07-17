@@ -1,0 +1,40 @@
+/*
+ * Desktop: Sidebar is a fixed left column; CanvasArea + BottomPanel stack
+ * in the remaining space, BottomPanel docked to the bottom.
+ * Mobile (<768px): Sidebar becomes an off-canvas drawer (see Sidebar.jsx),
+ * a MobileTopBar takes its place at the top, and BottomPanel becomes a
+ * bottom sheet. The grid-template-columns swap is what turns the sidebar
+ * column on/off — no JS layout branching needed for that part.
+ */
+
+.shell {
+  display: grid;
+  grid-template-columns: var(--sidebar-width) 1fr;
+  grid-template-rows: 1fr;
+  height: 100vh;
+  background: var(--chrome-bg);
+  color: var(--chrome-text);
+  font-family: var(--font-ui);
+}
+
+.mainColumn {
+  display: grid;
+  grid-template-rows: 1fr var(--bottom-panel-height);
+  min-width: 0; /* allow CanvasArea to shrink/scroll instead of overflowing the grid */
+  min-height: 0;
+}
+
+/* NOTE: CSS custom properties can't be read inside @media conditions, so
+   this 768px is a literal copy of --breakpoint-mobile in tokens.css. If you
+   change one, change the other — every layout/*.module.css file in this
+   folder repeats this same literal for the same reason. */
+@media (max-width: 768px) {
+  .shell {
+    grid-template-columns: 1fr;
+    grid-template-rows: var(--mobile-topbar-height) 1fr;
+  }
+
+  .mainColumn {
+    grid-template-rows: 1fr var(--bottom-panel-height);
+  }
+}

@@ -31,4 +31,20 @@
 
   --radius-sm: 4px;
   --radius-md: 8px;
+
+  /* Layout chrome — Sidebar / CanvasArea / BottomPanel shell dimensions.
+     Kept separate from the spacing scale above since these are structural
+     (fixed layout regions), not general-purpose gaps/padding. */
+  --sidebar-width: 260px;
+  --bottom-panel-height: 220px;
+  --mobile-topbar-height: 52px;
+  --breakpoint-mobile: 768px;
+
+  /* Interactive states for chrome elements (buttons, active list rows,
+     hover). Separate from --brand-blue so the document preview's brand
+     color and the editor UI's interactive color can diverge later without
+     one accidentally affecting the other. Same hue for now, on purpose. */
+  --chrome-accent: #285aa0;
+  --chrome-accent-hover: #1f4680;
+  --chrome-accent-bg: #eaf0fb;
 }

@@ -1,0 +1,36 @@
+.panel {
+  border-top: 1px solid var(--chrome-border);
+  background: #ffffff;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.tabBar {
+  display: flex;
+  border-bottom: 1px solid var(--chrome-border);
+  flex-shrink: 0;
+}
+
+.tabButton {
+  font-family: var(--font-ui);
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--chrome-text-muted);
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  padding: var(--space-sm) var(--space-md);
+  cursor: pointer;
+}
+
+.tabButtonActive {
+  color: var(--chrome-accent);
+  border-bottom-color: var(--chrome-accent);
+}
+
+.tabContent {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
