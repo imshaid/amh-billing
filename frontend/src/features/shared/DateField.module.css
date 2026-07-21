@@ -46,6 +46,31 @@
   font-family: var(--font-bengali, inherit);
 }
 
+/* On small screens, anchoring the popup under the trigger risks it
+   overflowing off the right edge of the viewport (a 300px popup barely
+   fits inside a ~375px phone screen at all, let alone anchored to a
+   trigger positioned mid-row in a meta-box field). Below
+   --breakpoint-mobile (768px, same as the rest of the workspace chrome —
+   see tokens.css) the popup instead renders inside a full-screen
+   .mobileOverlay, centered, like every other modal in this app
+   (PackagePickerPopup, ConfirmDialog) — see DateField.jsx's isMobile
+   check. */
+.mobileOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+  padding: var(--space-lg);
+}
+
+.calendarPopupMobile {
+  width: 100%;
+  max-width: 320px;
+}
+
 .calendarHeader {
   display: flex;
   align-items: center;

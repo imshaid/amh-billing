@@ -49,6 +49,19 @@ function formatDisplay(isoDate) {
   return `${d}/${m}/${y}`;
 }
 
+/** Same breakpoint used throughout the workspace chrome (see
+ * --breakpoint-mobile in tokens.css) — matched here in JS because deciding
+ * "anchored under the trigger" vs "centered overlay" is a layout *mode*
+ * choice, not something CSS media queries alone can express when the
+ * position is computed from getBoundingClientRect() in JS. */
+const MOBILE_BREAKPOINT = 768;
+
+function isMobileViewport() {
+  return (
+    typeof window !== "undefined" && window.innerWidth <= MOBILE_BREAKPOINT
+  );
+}
+
 /** Local Y-M-D key, used to compare two dates by calendar day without any
  * timezone-conversion surprises from Date's own equality/comparison. */
 function dateKey(d) {
@@ -91,6 +104,7 @@ export default function DateField({ value, onChange }) {
     value ? new Date(value) : new Date(),
   );
   const [popupPosition, setPopupPosition] = useState(null);
+  const [isMobile, setIsMobile] = useState(false);
   const triggerRef = useRef(null);
   const popupRef = useRef(null);
 
@@ -110,10 +124,13 @@ export default function DateField({ value, onChange }) {
   // Keep the popup pinned under the trigger if the page scrolls/resizes
   // while it's open (e.g. the workspace canvas's own scroll — see
   // CanvasArea), since position is computed once from getBoundingClientRect
-  // rather than following the trigger via normal document flow.
+  // rather than following the trigger via normal document flow. On mobile
+  // this also re-checks whether the viewport has crossed the breakpoint
+  // (e.g. device rotation) and switches positioning mode accordingly.
   useEffect(() => {
     if (!isOpen) return;
     function updatePosition() {
+      setIsMobile(isMobileViewport());
       const rect = triggerRef.current?.getBoundingClientRect();
       if (rect) {
         setPopupPosition({ top: rect.bottom + 4, left: rect.left });
@@ -130,6 +147,7 @@ export default function DateField({ value, onChange }) {
 
   function openPicker() {
     setViewDate(value ? new Date(value) : new Date());
+    setIsMobile(isMobileViewport());
     const rect = triggerRef.current?.getBoundingClientRect();
     if (rect) {
       setPopupPosition({ top: rect.bottom + 4, left: rect.left });
@@ -224,88 +242,110 @@ export default function DateField({ value, onChange }) {
       {isOpen &&
         popupPosition &&
         createPortal(
-          <div
-            ref={popupRef}
-            className={styles.calendarPopup}
-            style={{
-              position: "fixed",
-              top: popupPosition.top,
-              left: popupPosition.left,
-            }}
-          >
-            <div className={styles.calendarHeader}>
-              <button
-                type="button"
-                className={styles.navButton}
-                onClick={() => shiftMonth(-1)}
-              >
-                ‹
-              </button>
-              <span className={styles.monthYearLabel}>
-                {MONTH_LABELS[month]}{" "}
-                <select
-                  className={styles.yearSelect}
-                  value={year}
-                  onChange={handleYearSelect}
-                >
-                  {yearOptions.map((y) => (
-                    <option key={y} value={y}>
-                      {toBanglaDigits(y)}
-                    </option>
-                  ))}
-                </select>
-              </span>
-              <button
-                type="button"
-                className={styles.navButton}
-                onClick={() => shiftMonth(1)}
-              >
-                ›
-              </button>
-            </div>
-
-            <div className={styles.weekdayRow}>
-              {WEEKDAY_LABELS.map((w, i) => (
-                <span key={i} className={styles.weekdayCell}>
-                  {w}
-                </span>
-              ))}
-            </div>
-
-            <div className={styles.daysGrid}>
-              {cells.map((day, i) => {
-                if (day === null) {
-                  return (
-                    <span key={`empty-${i}`} className={styles.dayCellEmpty} />
-                  );
-                }
-                const isToday =
-                  dateKey(new Date(year, month, day)) === todayKey;
-                return (
-                  <button
-                    key={day}
-                    type="button"
-                    className={`${styles.dayCell} ${day === selectedDay ? styles.dayCellSelected : ""} ${
-                      isToday && day !== selectedDay ? styles.dayCellToday : ""
-                    }`}
-                    onClick={() => handlePickDay(day)}
-                  >
-                    {day}
-                  </button>
-                );
-              })}
-            </div>
-
-            <button
-              type="button"
-              className={styles.todayButton}
-              onClick={handleToday}
+          isMobile ? (
+            <div
+              className={styles.mobileOverlay}
+              onClick={() => setIsOpen(false)}
             >
-              আজ
-            </button>
-          </div>,
+              <div
+                ref={popupRef}
+                className={`${styles.calendarPopup} ${styles.calendarPopupMobile}`}
+                onClick={(e) => e.stopPropagation()}
+              >
+                {renderCalendarBody()}
+              </div>
+            </div>
+          ) : (
+            <div
+              ref={popupRef}
+              className={styles.calendarPopup}
+              style={{
+                position: "fixed",
+                top: popupPosition.top,
+                left: popupPosition.left,
+              }}
+            >
+              {renderCalendarBody()}
+            </div>
+          ),
           document.body,
         )}
     </span>
   );
+
+  function renderCalendarBody() {
+    return (
+      <>
+        <div className={styles.calendarHeader}>
+          <button
+            type="button"
+            className={styles.navButton}
+            onClick={() => shiftMonth(-1)}
+          >
+            ‹
+          </button>
+          <span className={styles.monthYearLabel}>
+            {MONTH_LABELS[month]}{" "}
+            <select
+              className={styles.yearSelect}
+              value={year}
+              onChange={handleYearSelect}
+            >
+              {yearOptions.map((y) => (
+                <option key={y} value={y}>
+                  {toBanglaDigits(y)}
+                </option>
+              ))}
+            </select>
+          </span>
+          <button
+            type="button"
+            className={styles.navButton}
+            onClick={() => shiftMonth(1)}
+          >
+            ›
+          </button>
+        </div>
+
+        <div className={styles.weekdayRow}>
+          {WEEKDAY_LABELS.map((w, i) => (
+            <span key={i} className={styles.weekdayCell}>
+              {w}
+            </span>
+          ))}
+        </div>
+
+        <div className={styles.daysGrid}>
+          {cells.map((day, i) => {
+            if (day === null) {
+              return (
+                <span key={`empty-${i}`} className={styles.dayCellEmpty} />
+              );
+            }
+            const isToday = dateKey(new Date(year, month, day)) === todayKey;
+            return (
+              <button
+                key={day}
+                type="button"
+                className={`${styles.dayCell} ${day === selectedDay ? styles.dayCellSelected : ""} ${
+                  isToday && day !== selectedDay ? styles.dayCellToday : ""
+                }`}
+                onClick={() => handlePickDay(day)}
+              >
+                {day}
+              </button>
+            );
+          })}
+        </div>
+
+        <button
+          type="button"
+          className={styles.todayButton}
+          onClick={handleToday}
+        >
+          আজ
+        </button>
+      </>
+    );
+  }
 }
