@@ -17,12 +17,21 @@ import styles from "./EditableField.module.css";
  * useDebouncedCallback. Local `value` state updates immediately so typing
  * never feels laggy; only the IndexedDB write is delayed.
  *
- * Full-width by default (`fill`) — fills whatever container it's placed in
- * (the meta-box value line, a table cell) rather than sizing to its current
- * text length, per the "input field too short" fix. Number fields
- * (quantity/rate) pass `align="center"` and `fill={false}` to stay compact
- * and centered within their table cell instead of stretching the whole
- * column.
+ * Always fills its container (`width: 100%` on both the wrapper span and
+ * the input itself) rather than sizing to browser-default input width —
+ * this used to be conditional on a `fill` prop, with quantity/rate table
+ * cells passing `fill={false}` to "stay compact." That was actually the
+ * bug: without an explicit width, a plain `<input>` defaults to roughly a
+ * 20-character-wide browser default, which is *wider* than a narrow
+ * Quantity/Rate `<td>` under `table-layout: fixed` (see BillPage.module.css
+ * — those columns are only ~8-9% of the page width). The oversized input
+ * visually overflowed into the neighboring column, which is what was
+ * reported as "clicking Quantity opens the field over Rate" and "Rate
+ * values appear under Amount." Filling the actual (narrow) `<td>` at 100%
+ * is what makes it compact — there's no separate non-fill mode needed.
+ *
+ * `align="center"` is still meaningful independent of width — quantity/rate
+ * values are centered within their (now correctly narrow) cell.
  *
  * `autocompleteField`, when given a field name (e.g. "buyerName"), turns on
  * a live-filtered suggestion dropdown backed by useFieldHistory — recently
@@ -46,7 +55,6 @@ import styles from "./EditableField.module.css";
  *   placeholder?: string,
  *   type?: "text"|"number",
  *   align?: "left"|"center",
- *   fill?: boolean,
  *   autocompleteField?: string,
  *   className?: string,
  * }} props
@@ -57,7 +65,6 @@ export default function EditableField({
   placeholder = "",
   type = "text",
   align = "left",
-  fill = true,
   autocompleteField,
   className = "",
 }) {
@@ -156,17 +163,12 @@ export default function EditableField({
     autocompleteField && isFocused && filteredSuggestions.length > 0;
 
   return (
-    <span
-      className={styles.wrapper}
-      ref={wrapperRef}
-      data-fill={fill || undefined}
-    >
+    <span className={styles.wrapper} ref={wrapperRef}>
       <input
         ref={inputRef}
         type={type}
         className={`${styles.field} ${className}`}
         data-align={align}
-        data-fill={fill || undefined}
         value={localValue}
         placeholder={placeholder}
         onChange={handleChange}

@@ -109,9 +109,17 @@ export function duplicateAsRevision(originalPage, changes) {
 /**
  * Builds a brand new Page pre-filled from `sourcePage` — buyerName, address,
  * date, serialOrLogCode, and lineItems all copied over — used by the
- * workspace's per-page "+ নতুন বিল/চালান/সামারি" buttons (see WorkspaceView/
+ * workspace's per-page "+ নতুন বিল/চালান" buttons (see WorkspaceView/
  * CanvasArea), which always duplicate whichever page they were clicked
  * under rather than starting blank.
+ *
+ * NOT used for creating a Summary page — see `createSummaryPage` instead.
+ * Summary is a fundamentally different case: its buyerName is the only
+ * field that carries over, and its lineItems are never a copy of anything —
+ * they're always *derived* at render time from the Set's Invoice pages (see
+ * recomputeSummaryLines / useRenderedPages), so pre-filling them here would
+ * just be overwritten anyway, and it's clearer to not pretend Summary has a
+ * "source page" it was duplicated from at all.
  *
  * `type` can differ from `sourcePage.type` (e.g. adding an Invoice under a
  * Bill). When it does, each copied line item keeps its packageName/items/
@@ -152,5 +160,36 @@ export function duplicatePageAsNew(sourcePage, { setId, type }) {
       amount: isSameType ? line.amount : null,
       amountIsOverridden: isSameType ? line.amountIsOverridden : false,
     })),
+  });
+}
+
+/**
+ * Builds a brand new Summary page. Per the Summary Page section in
+ * docs/data-model.md — "buyerName/address/date/serialOrLogCode default
+ * empty (user can fill them in), quantity is auto-aggregated" — only
+ * `buyerName` carries over from whichever page the "+ নতুন সামারি" button
+ * was clicked under; address/date/serialOrLogCode always start blank
+ * (still editable afterward, same as any other field).
+ *
+ * `lineItems` starts empty here on purpose: it is never read back from
+ * storage for display — `recomputeSummaryLines` (via useRenderedPages)
+ * rebuilds it on every render from the Set's Invoice pages, falling back to
+ * the Bill's packages when there are no Invoice pages yet (see
+ * summaryCalculator.js's fallback logic) — so whatever is stored here is
+ * only a snapshot of the last manual override, not the source of truth for
+ * what packages appear.
+ *
+ * @param {{ setId: string, buyerName?: string }} input
+ * @returns {Page}
+ */
+export function createSummaryPage({ setId, buyerName = "" }) {
+  return createPage({
+    setId,
+    type: "summary",
+    buyerName,
+    address: "",
+    date: "",
+    serialOrLogCode: "",
+    lineItems: [],
   });
 }

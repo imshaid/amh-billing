@@ -5,6 +5,7 @@ import {
   updateDraftPage,
   addPage,
   addDuplicatedPage,
+  addSummaryPage,
   deletePage,
 } from "../../db/pages.repository.js";
 import { resyncSetPageOrder } from "../../db/sets.repository.js";
@@ -36,11 +37,15 @@ const SCOPE_PROMPTABLE_FIELDS = new Set(["buyerName", "address"]);
  * `registerScrollApi` callback passed up to WorkspaceView).
  *
  * A PageActionBar renders below every page (+ নতুন বিল/চালান/সামারি,
- * ডিলিট) — clicking an add button there always duplicates *that* page's
- * buyerName/address/date/lineItems into a fresh page via
- * `addDuplicatedPage` (see domain/models/Page.js's duplicatePageAsNew),
- * never starts blank. There is deliberately no "duplicate" button separate
- * from these — the add buttons already are the duplicate action.
+ * ডিলিট). For Bill/Invoice, clicking an add button duplicates *that* page's
+ * buyerName/address/date/lineItems into a fresh page via `addDuplicatedPage`
+ * (see domain/models/Page.js's duplicatePageAsNew), never starting blank.
+ * Summary is different: only buyerName carries over (see createSummaryPage's
+ * doc comment) and its lineItems are always derived at render time from the
+ * Set's Invoice/Bill pages, never copied — so "+ নতুন সামারি" goes through
+ * `addSummaryPage` instead. There is deliberately no "duplicate" button
+ * separate from these — the Bill/Invoice add buttons already are the
+ * duplicate action.
  *
  * Inline edits write straight to IndexedDB via `updateDraftPage` — this is
  * safe because, per the History Edit Policy in docs/data-model.md, a page
@@ -172,7 +177,18 @@ export default function CanvasArea({
   async function handleAddPageAfter(sourcePageId, type) {
     const sourcePage = renderedPages.find((p) => p.id === sourcePageId);
     if (!sourcePage) return;
-    const newPage = await addDuplicatedPage(sourcePage, type);
+    // Summary is not a duplicate of sourcePage — only buyerName carries
+    // over, and its lineItems are always derived at render time (see
+    // recomputeSummaryLines / useRenderedPages), never copied. See
+    // createSummaryPage's doc comment for why this needs its own path
+    // instead of duplicatePageAsNew.
+    const newPage =
+      type === "summary"
+        ? await addSummaryPage({
+            setId: activeSetId,
+            buyerName: sourcePage.buyerName,
+          })
+        : await addDuplicatedPage(sourcePage, type);
     await resyncSetPageOrder(activeSetId);
     await refreshPages();
     requestAnimationFrame(() =>
@@ -183,12 +199,17 @@ export default function CanvasArea({
   }
 
   // Only used for the very first page in an empty Set — there is nothing
-  // yet to duplicate from, so this is the one case that still calls plain
-  // `addPage` instead of `addDuplicatedPage`. Every subsequent page always
-  // goes through a PageActionBar attached to an existing page instead.
+  // yet to duplicate from, so Bill/Invoice fall back to plain `addPage`
+  // here. Summary still goes through `addSummaryPage` even as the first
+  // page, since it never copies lineItems from anything regardless of
+  // whether a source page exists.
   async function handleCreateFirstPage(type) {
     if (!activeSetId) return;
-    await addPage({ setId: activeSetId, type });
+    if (type === "summary") {
+      await addSummaryPage({ setId: activeSetId });
+    } else {
+      await addPage({ setId: activeSetId, type });
+    }
     await resyncSetPageOrder(activeSetId);
     await refreshPages();
   }

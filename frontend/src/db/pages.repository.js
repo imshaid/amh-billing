@@ -2,6 +2,7 @@ import { getDB } from "./client.js";
 import { STORE } from "./schema.js";
 import {
   createPage,
+  createSummaryPage,
   duplicateAsRevision,
   duplicatePageAsNew,
 } from "../domain/models/Page.js";
@@ -51,9 +52,11 @@ export async function addPage(input) {
 /**
  * Creates and persists a new Page pre-filled from `sourcePage` (buyerName,
  * address, date, lineItems all copied — see `duplicatePageAsNew`). This is
- * what the workspace's per-page "+ নতুন বিল/চালান/সামারি" buttons call —
- * every new page after the first one in a Set starts as a copy of whichever
- * page it was added under, never blank.
+ * what the workspace's per-page "+ নতুন বিল/চালান" buttons call — every new
+ * Bill/Invoice page after the first one in a Set starts as a copy of
+ * whichever page it was added under, never blank.
+ *
+ * NOT used for "+ নতুন সামারি" — see `addSummaryPage` instead.
  *
  * @param {import('../domain/models/Page.js').Page} sourcePage
  * @param {import('../domain/models/Page.js').Page['type']} type
@@ -64,6 +67,21 @@ export async function addDuplicatedPage(sourcePage, type) {
     setId: sourcePage.setId,
     type,
   });
+  await db.add(STORE.PAGES, page);
+  return page;
+}
+
+/**
+ * Creates and persists a new Summary page. Per `createSummaryPage`'s own
+ * doc comment, only `buyerName` carries over — address/date/serialOrLogCode
+ * start blank, and lineItems starts empty since it's always recomputed at
+ * render time from the Set's Invoice (or, absent those, Bill) pages.
+ *
+ * @param {{ setId: string, buyerName?: string }} input
+ */
+export async function addSummaryPage(input) {
+  const db = await getDB();
+  const page = createSummaryPage(input);
   await db.add(STORE.PAGES, page);
   return page;
 }

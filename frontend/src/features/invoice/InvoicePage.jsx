@@ -68,7 +68,6 @@ export default function InvoicePage({
                   value={line.quantity}
                   onChange={(v) => onLineChange(line.id, "quantity", v)}
                   align="center"
-                  fill={false}
                 />
               </td>
             </tr>

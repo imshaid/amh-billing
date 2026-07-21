@@ -1,15 +1,15 @@
 .wrapper {
   position: relative;
-  display: inline-block;
-}
-
-.wrapper[data-fill] {
   display: block;
   width: 100%;
+  box-sizing: border-box;
 }
 
 .field {
   min-width: 40px;
+  max-width: 100%;
+  width: 100%;
+  box-sizing: border-box;
   border: none;
   border-bottom: 1px dashed transparent;
   background: transparent;
@@ -19,10 +19,20 @@
   text-align: left;
 }
 
-.field[data-fill] {
-  display: block;
-  width: 100%;
-  box-sizing: border-box;
+/* Hides the browser's up/down spinner arrows on number inputs (quantity,
+   rate) — these add extra rendered width beyond the input's own box,
+   which was part of what let a number field visually bleed into the next
+   table column under table-layout: fixed. Not needed for this compact
+   inline-edit UI anyway; typing a number or using the keyboard's own
+   up/down works regardless. */
+.field::-webkit-outer-spin-button,
+.field::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.field[type="number"] {
+  -moz-appearance: textfield;
 }
 
 .field[data-align="center"] {

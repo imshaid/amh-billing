@@ -16,9 +16,10 @@ export function useRenderedPages(pages) {
   return useMemo(() => {
     if (!pages) return [];
     const invoicePages = pages.filter((p) => p.type === "invoice");
+    const billPages = pages.filter((p) => p.type === "bill");
     return pages.map((page) => {
       if (page.type === "summary")
-        return recomputeSummaryLines(page, invoicePages);
+        return recomputeSummaryLines(page, invoicePages, billPages);
       if (page.type === "bill") return recomputeBillTotals(page);
       return page;
     });
