@@ -1,8 +1,19 @@
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import styles from "./DateField.module.css";
 
-const WEEKDAY_LABELS = ["র", "সো", "ম", "বু", "বৃ", "শু", "শ"];
-const BN_DIGITS = ["০", "১", "২", "৩", "৪", "৫", "৬", "৭", "৮", "৯"];
+/** Full Bangla weekday names, without the "বার" suffix per the workspace
+ * feedback ("রবি" not "রবিবার") — starts Sunday to match JS's
+ * Date.getDay() (0 = Sunday), same order as the grid below. */
+const WEEKDAY_LABELS = [
+  "রবি",
+  "সোম",
+  "মঙ্গল",
+  "বুধ",
+  "বৃহস্পতি",
+  "শুক্র",
+  "শনি",
+];
 const MONTH_LABELS = [
   "জানুয়ারি",
   "ফেব্রুয়ারি",
@@ -18,6 +29,7 @@ const MONTH_LABELS = [
   "ডিসেম্বর",
 ];
 
+const BN_DIGITS = ["০", "১", "২", "৩", "৪", "৫", "৬", "৭", "৮", "৯"];
 function toBanglaDigits(n) {
   return String(n)
     .split("")
@@ -27,10 +39,20 @@ function toBanglaDigits(n) {
 
 /** @param {string} isoDate  "YYYY-MM-DD" */
 function formatDisplay(isoDate) {
+  // Dates in the field itself are English digits per the workspace
+  // feedback ("only dates are in english, month and day in bangla") — this
+  // is the compact dd/mm/yyyy shown in the trigger button, not the popup's
+  // month/weekday labels (those stay Bangla, see MONTH_LABELS/WEEKDAY_LABELS).
   if (!isoDate) return null;
   const [y, m, d] = isoDate.split("-");
   if (!y || !m || !d) return null;
-  return `${toBanglaDigits(Number(d))}/${toBanglaDigits(Number(m))}/${toBanglaDigits(Number(y))}`;
+  return `${d}/${m}/${y}`;
+}
+
+/** Local Y-M-D key, used to compare two dates by calendar day without any
+ * timezone-conversion surprises from Date's own equality/comparison. */
+function dateKey(d) {
+  return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
 }
 
 /**
@@ -41,9 +63,25 @@ function formatDisplay(isoDate) {
  * string ("YYYY-MM-DD", per Page.date in docs/data-model.md); only the
  * display and picker UI are custom.
  *
- * Renders as a click-to-open calendar popup (month grid, prev/next
- * navigation, "আজ" shortcut) rather than a native date input, matching the
- * rest of the workspace's design system instead of the OS/browser widget.
+ * Display language split, per explicit feedback: the compact dd/mm/yyyy in
+ * the trigger button and the day numbers in the calendar grid are English
+ * digits; month names and weekday labels stay full Bangla words (e.g.
+ * "জুলাই ২০২৬", "রবি") — not abbreviated to a single letter, and without
+ * the "বার" suffix.
+ *
+ * The day grid always renders 6 rows (42 cells) regardless of how many
+ * weeks the current month actually spans, padding with invisible cells at
+ * both ends — this keeps the popup a fixed height across every month
+ * (28/29/30/31-day months and different starting weekdays would otherwise
+ * each need 4, 5, or 6 rows, resizing the popup every time the month
+ * changes, which was reported as a bug).
+ *
+ * The calendar popup is rendered through a React portal into
+ * `document.body` — required because DateField lives inside
+ * DocumentHeader's `.valueLine` (see DocumentHeader.module.css), which has
+ * `overflow: hidden` for the dotted-underline background trick; without
+ * the portal the popup would be invisibly clipped rather than failing to
+ * open. Positioned via the trigger button's `getBoundingClientRect()`.
  *
  * @param {{ value: string, onChange: (isoDate: string) => void }} props
  */
@@ -52,12 +90,16 @@ export default function DateField({ value, onChange }) {
   const [viewDate, setViewDate] = useState(() =>
     value ? new Date(value) : new Date(),
   );
-  const wrapperRef = useRef(null);
+  const [popupPosition, setPopupPosition] = useState(null);
+  const triggerRef = useRef(null);
+  const popupRef = useRef(null);
 
   useEffect(() => {
     if (!isOpen) return;
     function handleClickOutside(e) {
-      if (wrapperRef.current && !wrapperRef.current.contains(e.target)) {
+      const clickedTrigger = triggerRef.current?.contains(e.target);
+      const clickedPopup = popupRef.current?.contains(e.target);
+      if (!clickedTrigger && !clickedPopup) {
         setIsOpen(false);
       }
     }
@@ -65,8 +107,33 @@ export default function DateField({ value, onChange }) {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isOpen]);
 
+  // Keep the popup pinned under the trigger if the page scrolls/resizes
+  // while it's open (e.g. the workspace canvas's own scroll — see
+  // CanvasArea), since position is computed once from getBoundingClientRect
+  // rather than following the trigger via normal document flow.
+  useEffect(() => {
+    if (!isOpen) return;
+    function updatePosition() {
+      const rect = triggerRef.current?.getBoundingClientRect();
+      if (rect) {
+        setPopupPosition({ top: rect.bottom + 4, left: rect.left });
+      }
+    }
+    updatePosition();
+    window.addEventListener("scroll", updatePosition, true);
+    window.addEventListener("resize", updatePosition);
+    return () => {
+      window.removeEventListener("scroll", updatePosition, true);
+      window.removeEventListener("resize", updatePosition);
+    };
+  }, [isOpen]);
+
   function openPicker() {
     setViewDate(value ? new Date(value) : new Date());
+    const rect = triggerRef.current?.getBoundingClientRect();
+    if (rect) {
+      setPopupPosition({ top: rect.bottom + 4, left: rect.left });
+    }
     setIsOpen(true);
   }
 
@@ -95,6 +162,15 @@ export default function DateField({ value, onChange }) {
     });
   }
 
+  function handleYearSelect(e) {
+    const nextYear = Number(e.target.value);
+    setViewDate((prev) => {
+      const next = new Date(prev);
+      next.setFullYear(nextYear);
+      return next;
+    });
+  }
+
   const year = viewDate.getFullYear();
   const month = viewDate.getMonth();
   const firstWeekday = new Date(year, month, 1).getDay();
@@ -106,73 +182,130 @@ export default function DateField({ value, onChange }) {
       ? new Date(value).getDate()
       : null;
 
+  const today = new Date();
+  const todayKey = dateKey(today);
+
+  // A ±5 year window around the current year — plenty for a billing app;
+  // if a page's existing date happens to fall outside that window (an old
+  // imported record, say), it's added to the list too so the dropdown
+  // always includes whatever's actually selected.
+  const yearOptions = (() => {
+    const base = today.getFullYear();
+    const range = [];
+    for (let y = base - 5; y <= base + 5; y++) range.push(y);
+    if (!range.includes(year)) range.push(year);
+    return range.sort((a, b) => a - b);
+  })();
+
   const display = formatDisplay(value);
 
+  // Always exactly 42 cells (6 full weeks) so the grid — and therefore the
+  // whole popup — is the same height in every month. Leading cells before
+  // day 1 and trailing cells after the month's last day are rendered empty
+  // (invisible, not just blank) rather than omitted.
+  const totalCells = 42;
+  const cells = Array.from({ length: totalCells }, (_, i) => {
+    const dayNumber = i - firstWeekday + 1;
+    if (dayNumber < 1 || dayNumber > daysInMonth) return null;
+    return dayNumber;
+  });
+
   return (
-    <span className={styles.wrapper} ref={wrapperRef}>
+    <span className={styles.wrapper}>
       <button
         type="button"
+        ref={triggerRef}
         className={`${styles.trigger} ${isOpen ? styles.triggerOpen : ""}`}
         onClick={openPicker}
       >
         {display ?? <span className={styles.placeholder}>দিন/মাস/বছর</span>}
       </button>
 
-      {isOpen && (
-        <div className={styles.calendarPopup}>
-          <div className={styles.calendarHeader}>
-            <button
-              type="button"
-              className={styles.navButton}
-              onClick={() => shiftMonth(-1)}
-            >
-              ‹
-            </button>
-            <span className={styles.monthYearLabel}>
-              {MONTH_LABELS[month]} {toBanglaDigits(year)}
-            </span>
-            <button
-              type="button"
-              className={styles.navButton}
-              onClick={() => shiftMonth(1)}
-            >
-              ›
-            </button>
-          </div>
-
-          <div className={styles.weekdayRow}>
-            {WEEKDAY_LABELS.map((w, i) => (
-              <span key={i} className={styles.weekdayCell}>
-                {w}
-              </span>
-            ))}
-          </div>
-
-          <div className={styles.daysGrid}>
-            {Array.from({ length: firstWeekday }).map((_, i) => (
-              <span key={`empty-${i}`} className={styles.dayCellEmpty} />
-            ))}
-            {Array.from({ length: daysInMonth }, (_, i) => i + 1).map((day) => (
-              <button
-                key={day}
-                type="button"
-                className={`${styles.dayCell} ${day === selectedDay ? styles.dayCellSelected : ""}`}
-                onClick={() => handlePickDay(day)}
-              >
-                {toBanglaDigits(day)}
-              </button>
-            ))}
-          </div>
-
-          <button
-            type="button"
-            className={styles.todayButton}
-            onClick={handleToday}
+      {isOpen &&
+        popupPosition &&
+        createPortal(
+          <div
+            ref={popupRef}
+            className={styles.calendarPopup}
+            style={{
+              position: "fixed",
+              top: popupPosition.top,
+              left: popupPosition.left,
+            }}
           >
-            আজ
-          </button>
-        </div>
-      )}
+            <div className={styles.calendarHeader}>
+              <button
+                type="button"
+                className={styles.navButton}
+                onClick={() => shiftMonth(-1)}
+              >
+                ‹
+              </button>
+              <span className={styles.monthYearLabel}>
+                {MONTH_LABELS[month]}{" "}
+                <select
+                  className={styles.yearSelect}
+                  value={year}
+                  onChange={handleYearSelect}
+                >
+                  {yearOptions.map((y) => (
+                    <option key={y} value={y}>
+                      {toBanglaDigits(y)}
+                    </option>
+                  ))}
+                </select>
+              </span>
+              <button
+                type="button"
+                className={styles.navButton}
+                onClick={() => shiftMonth(1)}
+              >
+                ›
+              </button>
+            </div>
+
+            <div className={styles.weekdayRow}>
+              {WEEKDAY_LABELS.map((w, i) => (
+                <span key={i} className={styles.weekdayCell}>
+                  {w}
+                </span>
+              ))}
+            </div>
+
+            <div className={styles.daysGrid}>
+              {cells.map((day, i) => {
+                if (day === null) {
+                  return (
+                    <span key={`empty-${i}`} className={styles.dayCellEmpty} />
+                  );
+                }
+                const isToday =
+                  dateKey(new Date(year, month, day)) === todayKey;
+                return (
+                  <button
+                    key={day}
+                    type="button"
+                    className={`${styles.dayCell} ${day === selectedDay ? styles.dayCellSelected : ""} ${
+                      isToday && day !== selectedDay ? styles.dayCellToday : ""
+                    }`}
+                    onClick={() => handlePickDay(day)}
+                  >
+                    {day}
+                  </button>
+                );
+              })}
+            </div>
+
+            <button
+              type="button"
+              className={styles.todayButton}
+              onClick={handleToday}
+            >
+              আজ
+            </button>
+          </div>,
+          document.body,
+        )}
     </span>
   );
 }

@@ -28,16 +28,21 @@
 }
 
 .calendarPopup {
-  position: absolute;
-  top: calc(100% + 4px);
-  left: 0;
+  /* position/top/left are set inline (see DateField.jsx) — this popup is
+     portaled to document.body and positioned via the trigger button's
+     getBoundingClientRect(), not via normal CSS relative-to-wrapper
+     positioning, so it can escape DocumentHeader's .valueLine
+     overflow:hidden (see the doc comment in DateField.jsx for why).
+     Fixed width AND the daysGrid's fixed row-count (see DateField.jsx —
+     always 42 cells) together keep this popup's size completely constant
+     across every month, so navigating months never resizes it. */
   background: #ffffff;
   border: 1px solid var(--chrome-border);
   border-radius: var(--radius-md);
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
   padding: var(--space-sm);
   z-index: 45;
-  width: 260px;
+  width: 300px;
   font-family: var(--font-bengali, inherit);
 }
 
@@ -56,6 +61,7 @@
   cursor: pointer;
   border-radius: 4px;
   color: var(--chrome-text);
+  flex-shrink: 0;
 }
 
 .navButton:hover {
@@ -66,6 +72,23 @@
   font-size: 0.9rem;
   font-weight: 600;
   color: var(--chrome-text);
+  white-space: nowrap;
+}
+
+.yearSelect {
+  font: inherit;
+  font-weight: 600;
+  color: var(--chrome-text);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+
+.yearSelect:hover,
+.yearSelect:focus {
+  color: var(--chrome-accent);
+  outline: none;
 }
 
 .weekdayRow {
@@ -76,32 +99,43 @@
 
 .weekdayCell {
   text-align: center;
-  font-size: 0.7rem;
+  font-size: 0.62rem;
   color: var(--chrome-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: clip;
+  padding: 0 1px;
 }
 
 .daysGrid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
+  grid-template-rows: repeat(6, 1fr);
   gap: 2px;
 }
 
 .dayCell {
   aspect-ratio: 1;
-  border: none;
+  border: 1px solid transparent;
   background: none;
   border-radius: 4px;
   font-size: 0.8rem;
   cursor: pointer;
   color: var(--chrome-text);
+  font-family: var(--font-english, inherit);
 }
 
 .dayCell:hover {
   background: var(--chrome-accent-bg);
 }
 
+.dayCellToday {
+  border-color: var(--chrome-accent);
+}
+
 .dayCellSelected {
   background: var(--chrome-accent);
+  border-color: var(--chrome-accent);
   color: #ffffff;
 }
 

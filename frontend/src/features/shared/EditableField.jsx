@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useDebouncedCallback } from "../../hooks/useDebouncedCallback.js";
 import { useFieldHistory } from "../../hooks/useFieldHistory.js";
 import styles from "./EditableField.module.css";
@@ -30,6 +31,15 @@ import styles from "./EditableField.module.css";
  * villages/schools). A value is recorded into that history once the
  * debounced save actually commits, not on every keystroke.
  *
+ * The dropdown is rendered through a React portal into `document.body` —
+ * same reason as DateField's calendar popup: this field lives inside
+ * DocumentHeader's `.valueLine`, which has `overflow: hidden` for the
+ * dotted-underline background trick, so a normally-positioned dropdown
+ * would be silently clipped to invisibility instead of actually failing to
+ * open. See DateField.jsx's doc comment for the full explanation — this
+ * was the same underlying bug reported as "date picker not working",
+ * affecting every autocomplete-enabled field the same way.
+ *
  * @param {{
  *   value: string|number|null,
  *   onChange: (value: string) => void,
@@ -53,6 +63,7 @@ export default function EditableField({
 }) {
   const [localValue, setLocalValue] = useState(value ?? "");
   const [isFocused, setIsFocused] = useState(false);
+  const [dropdownPosition, setDropdownPosition] = useState(null);
   const debouncedSave = useDebouncedCallback((v) => {
     onChange(v);
     if (autocompleteField) record(v);
@@ -61,6 +72,8 @@ export default function EditableField({
     autocompleteField ?? "__unused__",
   );
   const wrapperRef = useRef(null);
+  const inputRef = useRef(null);
+  const dropdownRef = useRef(null);
 
   // Keep local state in sync if the page changes underneath us (e.g. a
   // summary re-aggregation, or switching which page this field belongs to).
@@ -68,11 +81,15 @@ export default function EditableField({
     setLocalValue(value ?? "");
   }, [value]);
 
-  // Close the suggestion dropdown on outside click.
+  // Close the suggestion dropdown on outside click. Checks both the input
+  // wrapper AND the portaled dropdown itself (dropdownRef), since the
+  // dropdown is no longer a DOM descendant of wrapperRef once portaled.
   useEffect(() => {
     if (!isFocused) return;
     function handleClickOutside(e) {
-      if (wrapperRef.current && !wrapperRef.current.contains(e.target)) {
+      const clickedWrapper = wrapperRef.current?.contains(e.target);
+      const clickedDropdown = dropdownRef.current?.contains(e.target);
+      if (!clickedWrapper && !clickedDropdown) {
         setIsFocused(false);
       }
     }
@@ -80,9 +97,44 @@ export default function EditableField({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isFocused]);
 
+  // Keep the portaled dropdown pinned under the input while open (e.g. if
+  // the workspace canvas scrolls — see CanvasArea).
+  useEffect(() => {
+    if (!isFocused) return;
+    function updatePosition() {
+      const rect = inputRef.current?.getBoundingClientRect();
+      if (rect) {
+        setDropdownPosition({
+          top: rect.bottom + 2,
+          left: rect.left,
+          width: rect.width,
+        });
+      }
+    }
+    updatePosition();
+    window.addEventListener("scroll", updatePosition, true);
+    window.addEventListener("resize", updatePosition);
+    return () => {
+      window.removeEventListener("scroll", updatePosition, true);
+      window.removeEventListener("resize", updatePosition);
+    };
+  }, [isFocused]);
+
   function handleChange(e) {
     setLocalValue(e.target.value);
     debouncedSave(e.target.value);
+  }
+
+  function handleFocus() {
+    setIsFocused(true);
+    const rect = inputRef.current?.getBoundingClientRect();
+    if (rect) {
+      setDropdownPosition({
+        top: rect.bottom + 2,
+        left: rect.left,
+        width: rect.width,
+      });
+    }
   }
 
   function handlePickSuggestion(suggestion) {
@@ -110,6 +162,7 @@ export default function EditableField({
       data-fill={fill || undefined}
     >
       <input
+        ref={inputRef}
         type={type}
         className={`${styles.field} ${className}`}
         data-align={align}
@@ -117,25 +170,37 @@ export default function EditableField({
         value={localValue}
         placeholder={placeholder}
         onChange={handleChange}
-        onFocus={() => setIsFocused(true)}
+        onFocus={handleFocus}
       />
-      {showDropdown && (
-        <span className={styles.dropdown}>
-          {filteredSuggestions.map((suggestion) => (
-            <button
-              key={suggestion}
-              type="button"
-              className={styles.dropdownItem}
-              onMouseDown={(e) => {
-                e.preventDefault(); // keep focus so the click actually registers before blur
-                handlePickSuggestion(suggestion);
-              }}
-            >
-              {suggestion}
-            </button>
-          ))}
-        </span>
-      )}
+      {showDropdown &&
+        dropdownPosition &&
+        createPortal(
+          <span
+            ref={dropdownRef}
+            className={styles.dropdown}
+            style={{
+              position: "fixed",
+              top: dropdownPosition.top,
+              left: dropdownPosition.left,
+              width: dropdownPosition.width,
+            }}
+          >
+            {filteredSuggestions.map((suggestion) => (
+              <button
+                key={suggestion}
+                type="button"
+                className={styles.dropdownItem}
+                onMouseDown={(e) => {
+                  e.preventDefault(); // keep focus so the click actually registers before blur
+                  handlePickSuggestion(suggestion);
+                }}
+              >
+                {suggestion}
+              </button>
+            ))}
+          </span>,
+          document.body,
+        )}
     </span>
   );
 }

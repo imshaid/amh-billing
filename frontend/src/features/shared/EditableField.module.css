@@ -40,10 +40,11 @@
 }
 
 .dropdown {
-  position: absolute;
-  top: calc(100% + 2px);
-  left: 0;
-  right: 0;
+  /* position/top/left/width are set inline (see EditableField.jsx) — this
+     dropdown is portaled to document.body and positioned via the input's
+     getBoundingClientRect(), not via normal CSS relative-to-wrapper
+     positioning, so it can escape DocumentHeader's .valueLine
+     overflow:hidden (see the doc comment in EditableField.jsx). */
   background: #ffffff;
   border: 1px solid var(--chrome-border);
   border-radius: var(--radius-sm);
