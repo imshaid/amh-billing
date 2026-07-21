@@ -172,6 +172,11 @@ export default function DateField({ value, onChange }) {
     setIsOpen(false);
   }
 
+  function handleClear() {
+    onChange("");
+    setIsOpen(false);
+  }
+
   function shiftMonth(delta) {
     setViewDate((prev) => {
       const next = new Date(prev);
@@ -338,13 +343,23 @@ export default function DateField({ value, onChange }) {
           })}
         </div>
 
-        <button
-          type="button"
-          className={styles.todayButton}
-          onClick={handleToday}
-        >
-          আজ
-        </button>
+        <div className={styles.bottomRow}>
+          <button
+            type="button"
+            className={styles.todayButton}
+            onClick={handleToday}
+          >
+            আজ
+          </button>
+          <button
+            type="button"
+            className={styles.clearButton}
+            onClick={handleClear}
+            disabled={!value}
+          >
+            মুছুন
+          </button>
+        </div>
       </>
     );
   }

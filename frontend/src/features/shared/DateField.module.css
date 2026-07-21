@@ -168,9 +168,14 @@
   visibility: hidden;
 }
 
-.todayButton {
+.bottomRow {
+  display: flex;
+  gap: var(--space-sm);
   margin-top: var(--space-sm);
-  width: 100%;
+}
+
+.todayButton {
+  flex: 1;
   font-size: 0.8rem;
   color: var(--chrome-accent);
   background: none;
@@ -182,4 +187,24 @@
 
 .todayButton:hover {
   border-color: var(--chrome-accent);
+}
+
+.clearButton {
+  flex: 1;
+  font-size: 0.8rem;
+  color: #b3261e;
+  background: none;
+  border: 1px solid var(--chrome-border);
+  border-radius: var(--radius-sm);
+  padding: 4px 0;
+  cursor: pointer;
+}
+
+.clearButton:hover:not(:disabled) {
+  border-color: #b3261e;
+}
+
+.clearButton:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
