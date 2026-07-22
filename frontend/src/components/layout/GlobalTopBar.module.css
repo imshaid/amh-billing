@@ -1,23 +1,45 @@
 /*
- * Single 3-slot header for the whole app (see GlobalTopBar.jsx's doc
- * comment) — left/center/right on a grid rather than flex space-between,
- * so the center group (PageCountNav + ZoomControl) stays truly centered in
- * the bar regardless of how wide the left (home + session name) or right
- * ("শেষ করুন") slots end up being. On non-workspace screens the center and
- * right slots render nothing, and the grid's `1fr auto 1fr` columns keep
- * the (now-alone) left slot pinned to the left rather than drifting toward
- * center — a plain flex row would center a single remaining child instead.
+ * `.topBar` is now a column wrapper holding `.topRow` always, and
+ * `.bottomRow` only when GlobalTopBar.jsx's `isNarrow && isWorkspace`
+ * render condition is true (see that file's doc comment — this is a real
+ * conditional render, not a CSS show/hide of a permanently-mounted second
+ * row). `.topRow` carries the exact 3-slot grid `.topBar` used to be
+ * directly: left/center/right on a grid rather than flex space-between, so
+ * the center group (PageCountNav + ZoomControl, wide-screen case) stays
+ * truly centered regardless of how wide the left (home + session name) or
+ * right ("শেষ করুন") slots end up being. On non-workspace screens the
+ * center and right slots render nothing, and the grid's `1fr auto 1fr`
+ * columns keep the (now-alone) left slot pinned to the left rather than
+ * drifting toward center — a plain flex row would center a single
+ * remaining child instead.
  */
 .topBar {
+  display: flex;
+  flex-direction: column;
+  border-bottom: 1px solid var(--chrome-border);
+  background: #ffffff;
+  flex-shrink: 0;
+}
+
+.topRow {
   display: grid;
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
   gap: var(--space-sm);
   padding: 0 var(--space-md);
   height: var(--mobile-topbar-height);
-  border-bottom: 1px solid var(--chrome-border);
-  background: #ffffff;
-  flex-shrink: 0;
+}
+
+/* Narrow-screen-only second row (see GlobalTopBar.jsx) — PageCountNav +
+   ZoomControl get their own full-width row instead of squeezing into
+   `.topRow`'s center column alongside the home button and "শেষ করুন". A
+   thin top border separates it from `.topRow` visually without doubling
+   the outer bar's own border-bottom. */
+.bottomRow {
+  display: flex;
+  justify-content: center;
+  padding: var(--space-xs) var(--space-md) var(--space-sm);
+  border-top: 1px solid var(--chrome-border);
 }
 
 .leftSlot {
@@ -90,26 +112,30 @@
   background: var(--chrome-accent-hover);
 }
 
-/* NOTE: literal copy of --breakpoint-mobile — see WorkspaceView.module.css. */
+/* NOTE: literal copy of --breakpoint-mobile — see WorkspaceView.module.css
+   and GlobalTopBar.jsx's NARROW_QUERY, which this must stay in sync with:
+   the JS decides *whether* to split into two rows, this only handles the
+   remaining single-row cosmetics (hiding the session name for space) at
+   the same width. */
 @media (max-width: 768px) {
   .activeSessionName {
     display: none; /* not enough room on small screens next to the home icon */
   }
-
-  .centerSlot {
-    gap: var(--space-sm);
-  }
 }
 
 /* Below this, PageCountNav's own three group buttons plus ZoomControl's
-   five buttons no longer comfortably fit the center column at once — see
+   five buttons no longer comfortably fit `.bottomRow` at once — see
    PageCountNav.module.css/ZoomControl.module.css for how each half shrinks
    its own padding/gaps first before anything here needs to. This is purely
-   the outer bar's own spacing getting tighter, not a different layout. */
+   spacing getting tighter, not a different layout. */
 @media (max-width: 480px) {
-  .topBar {
+  .topRow {
     padding: 0 var(--space-sm);
     gap: var(--space-xs);
+  }
+
+  .bottomRow {
+    padding: var(--space-xs) var(--space-sm) var(--space-sm);
   }
 
   .doneButton {

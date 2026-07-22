@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useRef, useState, useLayoutEffect } from "react";
 import { useRenderedPages } from "../../hooks/useRenderedPages.js";
 import { sortPagesForDisplay } from "../../domain/aggregation/pageSort.js";
 import {
@@ -125,6 +125,50 @@ export default function CanvasArea({
   const [deletingPageId, setDeletingPageId] = useState(null);
   // { pageId, lineId } for a line item awaiting delete confirmation.
   const [deletingLineItem, setDeletingLineItem] = useState(null);
+
+  // Keeps whatever's currently centered in the viewport centered across a
+  // zoom change, per an explicit design request — zooming in/out (via
+  // ZoomControl's +/-, its dropdown, fit-width, or fit-height) re-scales
+  // every page, which changes .canvas's total scrollHeight; without this,
+  // the browser just keeps the same absolute `scrollTop`, so whatever was
+  // in the middle of the screen visibly drifts up or down as the content
+  // around it grows/shrinks. This only ever adjusts vertical (Y-axis)
+  // scroll — horizontal scroll position is left exactly as-is, since the
+  // "center" ask here was specifically about the Y axis, not a general
+  // recentering of the canvas.
+  //
+  // Mechanism: capture the scroll-center as a *ratio* of scrollHeight right
+  // before `zoom` changes (a plain variable read during render, not a
+  // layout effect — by the time an effect could run, the DOM already
+  // reflects the *new* zoom, so the *old* scrollHeight would be gone), then
+  // after the DOM updates for the new zoom, re-apply that same ratio
+  // against the *new* scrollHeight. Using a ratio (not a fixed pixel
+  // offset) is what makes this work regardless of how much the total
+  // height changed — a ratio-based center survives content growing or
+  // shrinking, a fixed pixel offset would not.
+  const prevZoomRef = useRef(zoom);
+  const pendingCenterRatioRef = useRef(null);
+
+  if (zoom !== prevZoomRef.current) {
+    const el = canvasRef.current;
+    if (el && el.scrollHeight > el.clientHeight) {
+      const centerScrollTop = el.scrollTop + el.clientHeight / 2;
+      pendingCenterRatioRef.current = centerScrollTop / el.scrollHeight;
+    } else {
+      pendingCenterRatioRef.current = null;
+    }
+    prevZoomRef.current = zoom;
+  }
+
+  useLayoutEffect(() => {
+    const ratio = pendingCenterRatioRef.current;
+    if (ratio == null) return;
+    const el = canvasRef.current;
+    if (!el) return;
+    const nextCenterScrollTop = ratio * el.scrollHeight;
+    el.scrollTop = nextCenterScrollTop - el.clientHeight / 2;
+    pendingCenterRatioRef.current = null;
+  }, [zoom]);
 
   if (registerScrollApi) {
     registerScrollApi({

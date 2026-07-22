@@ -1,8 +1,11 @@
 import { useState, useCallback } from "react";
 
-const MIN_ZOOM = 0.4;
-const MAX_ZOOM = 1.5;
-const STEP = 0.1;
+// Per explicit design request: 25%–200% range, with the zoom-level dropdown
+// (see ZoomControl's new levels list) offering 25%-interval stops across
+// that whole span.
+const MIN_ZOOM = 0.25;
+const MAX_ZOOM = 2;
+const STEP = 0.1; // used by the +/- buttons only — see ZOOM_LEVEL_PERCENTAGES for the dropdown's own 25%-interval stops.
 
 // A4 page dimensions in CSS px at 96dpi — matches the fixed `210mm`/`297mm`
 // set on .page in BillPage.module.css/InvoicePage.module.css. Used only to
@@ -20,6 +23,13 @@ const A4_HEIGHT_PX = 1122.5;
 // scrolling, so fit-width treats the page's *reachable* width as this much
 // wider than the raw A4 width when computing a zoom level.
 const FLOATING_BUTTON_OFFSET_PX = 22;
+
+// The dropdown's fixed list of zoom-level shortcuts — 25%, 50%, ..., 200%,
+// matching MIN_ZOOM/MAX_ZOOM's span at a 25% interval (see ZoomControl.jsx,
+// which renders this as a popover under the percentage label). Exported as
+// plain percentages (not zoom fractions) so the component can render "৫০%"
+// etc directly without re-deriving the interval math itself.
+export const ZOOM_LEVEL_PERCENTAGES = [25, 50, 75, 100, 125, 150, 175, 200];
 
 /**
  * Zoom level for the canvas — pages are fixed at real A4 size (210mm, see
@@ -58,6 +68,14 @@ export function useZoom(initial = 1) {
   );
   const resetZoom = useCallback(() => setZoom(1), []);
 
+  // Used by ZoomControl's dropdown (see ZOOM_LEVEL_PERCENTAGES) — takes a
+  // plain percentage (25, 50, ...) rather than a fraction, since that's how
+  // the dropdown's own labels are expressed, and clamps the same as every
+  // other zoom setter here.
+  const setZoomPercent = useCallback((percent) => {
+    setZoom(Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, percent / 100)));
+  }, []);
+
   const zoomToFitWidth = useCallback((availableWidthPx) => {
     if (!availableWidthPx) return;
     const next = availableWidthPx / (A4_WIDTH_PX + FLOATING_BUTTON_OFFSET_PX);
@@ -79,6 +97,7 @@ export function useZoom(initial = 1) {
     zoomIn,
     zoomOut,
     resetZoom,
+    setZoomPercent,
     zoomToFitWidth,
     zoomToFitHeight,
     setZoom,

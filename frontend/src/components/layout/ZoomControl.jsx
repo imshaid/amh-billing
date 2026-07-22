@@ -1,3 +1,5 @@
+import { useState, useRef, useEffect } from "react";
+import { ZOOM_LEVEL_PERCENTAGES } from "../../hooks/useZoom.js";
 import styles from "./ZoomControl.module.css";
 
 const BN_DIGITS = ["০", "১", "২", "৩", "৪", "৫", "৬", "৭", "৮", "৯"];
@@ -10,10 +12,18 @@ function toBanglaDigits(n) {
 
 /**
  * Zoom in/out/reset controls for the canvas — addresses "pages not properly
- * fit on small devices, also not have any zoom options". Percentage label
- * doubles as a reset-to-100% button (click it to snap back), matching the
- * common convention in PDF viewers this workspace is otherwise styled
- * after (see the Chrome-PDF-viewer reference that shaped this redesign).
+ * fit on small devices, also not have any zoom options". +/- step by 10%
+ * (see useZoom's STEP); the percentage label itself now has two roles per
+ * an explicit design request:
+ *   - A single click opens a dropdown of fixed zoom-level shortcuts (25%,
+ *     50%, ..., 200% — see ZOOM_LEVEL_PERCENTAGES, a 25%-interval list
+ *     spanning useZoom's own MIN_ZOOM/MAX_ZOOM range) so the user can jump
+ *     straight to a level instead of stepping there one +/- click at a
+ *     time.
+ *   - A double-click still resets straight to 100%, same as the old
+ *     single-click behavior, kept for anyone used to that shortcut.
+ * Clicking a dropdown item, clicking anywhere else on the page, or
+ * pressing Escape all close it.
  *
  * `onFitWidth`/`onFitHeight` are optional — when provided, two extra icon
  * buttons render after the zoom-in button, matching the fit-width/fit-page
@@ -26,6 +36,7 @@ function toBanglaDigits(n) {
  *   onZoomIn: () => void,
  *   onZoomOut: () => void,
  *   onReset: () => void,
+ *   onSetZoomPercent: (percent: number) => void,
  *   onFitWidth?: () => void,
  *   onFitHeight?: () => void,
  * }} props
@@ -35,9 +46,31 @@ export default function ZoomControl({
   onZoomIn,
   onZoomOut,
   onReset,
+  onSetZoomPercent,
   onFitWidth,
   onFitHeight,
 }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const wrapperRef = useRef(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    function handleOutside(e) {
+      if (!wrapperRef.current?.contains(e.target)) setIsOpen(false);
+    }
+    function handleEscape(e) {
+      if (e.key === "Escape") setIsOpen(false);
+    }
+    document.addEventListener("mousedown", handleOutside);
+    document.addEventListener("keydown", handleEscape);
+    return () => {
+      document.removeEventListener("mousedown", handleOutside);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [isOpen]);
+
+  const currentPercent = Math.round(zoom * 100);
+
   return (
     <div className={styles.control}>
       <button
@@ -48,14 +81,47 @@ export default function ZoomControl({
       >
         −
       </button>
-      <button
-        type="button"
-        className={styles.level}
-        onClick={onReset}
-        title="১০০%-এ ফিরুন"
-      >
-        {toBanglaDigits(Math.round(zoom * 100))}%
-      </button>
+
+      <div className={styles.levelWrapper} ref={wrapperRef}>
+        <button
+          type="button"
+          className={styles.level}
+          onClick={() => setIsOpen((v) => !v)}
+          onDoubleClick={() => {
+            setIsOpen(false);
+            onReset();
+          }}
+          title="জুম লেভেল বেছে নিন (ডাবল-ক্লিকে ১০০%)"
+          aria-haspopup="listbox"
+          aria-expanded={isOpen}
+        >
+          {toBanglaDigits(currentPercent)}%
+        </button>
+
+        {isOpen && (
+          <ul className={styles.dropdown} role="listbox">
+            {ZOOM_LEVEL_PERCENTAGES.map((percent) => (
+              <li key={percent}>
+                <button
+                  type="button"
+                  role="option"
+                  aria-selected={percent === currentPercent}
+                  className={`${styles.dropdownItem} ${
+                    percent === currentPercent ? styles.dropdownItemActive : ""
+                  }`}
+                  onClick={() => {
+                    onSetZoomPercent(percent);
+                    setIsOpen(false);
+                  }}
+                >
+                  {toBanglaDigits(percent)}%
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
       <button
         type="button"
         className={styles.button}

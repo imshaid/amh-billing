@@ -52,8 +52,15 @@ export default function AppRouter() {
   // the header's own layout breakpoint.
   const initialZoom =
     typeof window !== "undefined" && window.innerWidth < 480 ? 0.5 : 1;
-  const { zoom, zoomIn, zoomOut, resetZoom, zoomToFitWidth, zoomToFitHeight } =
-    useZoom(initialZoom);
+  const {
+    zoom,
+    zoomIn,
+    zoomOut,
+    resetZoom,
+    setZoomPercent,
+    zoomToFitWidth,
+    zoomToFitHeight,
+  } = useZoom(initialZoom);
 
   function handleJumpToPage(pageId) {
     dispatch({ type: "SET_ACTIVE_PAGE", payload: pageId });
@@ -82,6 +89,7 @@ export default function AppRouter() {
         onZoomIn={zoomIn}
         onZoomOut={zoomOut}
         onZoomReset={resetZoom}
+        onSetZoomPercent={setZoomPercent}
         onFitWidth={handleFitWidth}
         onFitHeight={handleFitHeight}
       />
