@@ -97,7 +97,10 @@ import styles from "./CanvasArea.module.css";
  *   status: "idle"|"loading"|"ready"|"error",
  *   refreshPages: () => Promise<void>,
  *   zoom: number,
- *   registerScrollApi: (api: { scrollToPage: (pageId: string) => void }) => void,
+ *   registerScrollApi: (api: {
+ *     scrollToPage: (pageId: string) => void,
+ *     getViewportSize: () => { width: number, height: number },
+ *   }) => void,
  * }} props
  */
 export default function CanvasArea({
@@ -110,6 +113,7 @@ export default function CanvasArea({
 }) {
   const renderedPages = sortPagesForDisplay(useRenderedPages(pages));
   const pageRefs = useRef(new Map());
+  const canvasRef = useRef(null);
   // Replaces the old plain `addingToPageId` string — the package picker now
   // has two distinct triggers (insert after a specific line, or replace a
   // specific line's package), both needing to know which page and which
@@ -128,6 +132,25 @@ export default function CanvasArea({
         pageRefs.current
           .get(pageId)
           ?.scrollIntoView({ behavior: "smooth", block: "start" });
+      },
+      // Used by ZoomControl's fit-width/fit-height buttons (see
+      // WorkspaceView) to compute what zoom level makes the fixed-A4-size
+      // page match the space actually available — clientWidth/Height
+      // already excludes the scrollbar, and .canvas's own padding (see
+      // CanvasArea.module.css) is subtracted here so "fit" doesn't leave
+      // the page pressed flush against the viewport edge.
+      getViewportSize: () => {
+        const el = canvasRef.current;
+        if (!el) return { width: 0, height: 0 };
+        const computed = window.getComputedStyle(el);
+        const paddingX =
+          parseFloat(computed.paddingLeft) + parseFloat(computed.paddingRight);
+        const paddingY =
+          parseFloat(computed.paddingTop) + parseFloat(computed.paddingBottom);
+        return {
+          width: el.clientWidth - paddingX,
+          height: el.clientHeight - paddingY,
+        };
       },
     });
   }
@@ -264,7 +287,7 @@ export default function CanvasArea({
 
   if (!activeSetId) {
     return (
-      <div className={styles.canvas}>
+      <div className={styles.canvas} ref={canvasRef}>
         <div className={styles.emptyState}>
           <p className={styles.emptyStateTitle}>কোনো সেশন নির্বাচিত নেই</p>
           <p>হোম থেকে একটা সেশন বেছে নিন, অথবা নতুন একটা শুরু করুন।</p>
@@ -275,7 +298,7 @@ export default function CanvasArea({
 
   if (status === "loading") {
     return (
-      <div className={styles.canvas}>
+      <div className={styles.canvas} ref={canvasRef}>
         <div className={styles.emptyState}>
           <p>পেজ লোড হচ্ছে…</p>
         </div>
@@ -285,7 +308,7 @@ export default function CanvasArea({
 
   if (renderedPages.length === 0) {
     return (
-      <div className={styles.canvas}>
+      <div className={styles.canvas} ref={canvasRef}>
         <div className={styles.emptyState}>
           <p className={styles.emptyStateTitle}>এখনো কোনো পেজ নেই</p>
           <p>শুরু করতে একটা পেজ যোগ করুন —</p>
@@ -337,7 +360,7 @@ export default function CanvasArea({
   const hasBillPage = renderedPages.some((p) => p.type === "bill");
 
   return (
-    <div className={styles.canvas}>
+    <div className={styles.canvas} ref={canvasRef}>
       {renderedPages.map((page) => {
         const canManagePackages =
           page.type === "bill"

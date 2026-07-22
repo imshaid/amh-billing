@@ -35,3 +35,40 @@
 .level:hover {
   color: var(--chrome-accent);
 }
+
+.divider {
+  width: 1px;
+  height: 18px;
+  background: var(--chrome-border);
+  margin: 0 2px;
+}
+
+.fitButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--chrome-text-muted);
+  background: none;
+  border: 1px solid var(--chrome-border);
+  border-radius: var(--radius-sm);
+  width: 26px;
+  height: 26px;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.fitButton:hover {
+  border-color: var(--chrome-accent);
+  color: var(--chrome-accent);
+}
+
+/* Shares the header's center slot with PageCountNav now (see
+   GlobalTopBar.jsx) — on very narrow screens the fit-width/fit-height
+   buttons are the first thing to go; zoom in/out/reset (the more commonly
+   used controls) stay. */
+@media (max-width: 400px) {
+  .divider,
+  .fitButton {
+    display: none;
+  }
+}

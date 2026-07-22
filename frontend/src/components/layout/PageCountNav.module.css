@@ -3,6 +3,20 @@
   gap: var(--space-sm);
 }
 
+/* Shares the header's center slot with ZoomControl now (see
+   GlobalTopBar.jsx) — on narrow screens, shrink this group's own padding
+   first before GlobalTopBar has to touch its outer spacing. */
+@media (max-width: 480px) {
+  .nav {
+    gap: 4px;
+  }
+
+  .groupButton {
+    padding: 3px 6px;
+    font-size: 0.78rem;
+  }
+}
+
 .groupWrapper {
   position: relative;
 }
