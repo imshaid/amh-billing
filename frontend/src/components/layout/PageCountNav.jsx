@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import styles from "./PageCountNav.module.css";
 
 const TYPE_LABELS = { bill: "বিল", invoice: "চালান", summary: "সামারি" };
@@ -18,6 +18,12 @@ const TYPE_ORDER = ["bill", "invoice", "summary"];
  * like "১-৩" reads oddly at count 1 ("১-১") and doesn't carry more meaning
  * than a plain count would for this UI.
  *
+ * The open dropdown closes on: picking a page number, clicking its own
+ * group button again (the original toggle), clicking anywhere else on the
+ * page, or Escape — clicking outside used to do nothing (no listener
+ * existed at all), so the only way to close it was to re-click the same
+ * button, which read as a bug in its own right.
+ *
  * @param {{
  *   pages: import('../../domain/models/Page.js').Page[]|null,
  *   activePageId: string|null,
@@ -26,6 +32,23 @@ const TYPE_ORDER = ["bill", "invoice", "summary"];
  */
 export default function PageCountNav({ pages, activePageId, onJumpToPage }) {
   const [openGroup, setOpenGroup] = useState(null);
+  const navRef = useRef(null);
+
+  useEffect(() => {
+    if (!openGroup) return;
+    function handleOutside(e) {
+      if (!navRef.current?.contains(e.target)) setOpenGroup(null);
+    }
+    function handleEscape(e) {
+      if (e.key === "Escape") setOpenGroup(null);
+    }
+    document.addEventListener("mousedown", handleOutside);
+    document.addEventListener("keydown", handleEscape);
+    return () => {
+      document.removeEventListener("mousedown", handleOutside);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [openGroup]);
 
   if (!pages) return null;
 
@@ -36,7 +59,7 @@ export default function PageCountNav({ pages, activePageId, onJumpToPage }) {
   }));
 
   return (
-    <div className={styles.nav}>
+    <div className={styles.nav} ref={navRef}>
       {grouped.map((group) => (
         <div key={group.type} className={styles.groupWrapper}>
           <button
