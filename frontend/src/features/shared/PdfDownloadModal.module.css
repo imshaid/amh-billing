@@ -1,0 +1,136 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 60;
+  padding: var(--space-lg);
+}
+
+.dialog {
+  background: #ffffff;
+  border-radius: var(--radius-md);
+  padding: var(--space-lg);
+  max-width: 420px;
+  width: 100%;
+  max-height: 80vh;
+  overflow-y: auto;
+  font-family: var(--font-bengali);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--chrome-text);
+  margin: 0;
+}
+
+.subtitle {
+  font-size: 0.82rem;
+  color: var(--chrome-text-muted);
+  margin: -8px 0 0 0;
+}
+
+.selectAllRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--chrome-text);
+  padding-bottom: var(--space-sm);
+  border-bottom: 1px solid var(--chrome-border);
+  cursor: pointer;
+}
+
+.groupList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.groupHeading {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--chrome-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  margin: 0 0 2px 0;
+}
+
+.pageRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.88rem;
+  color: var(--chrome-text);
+  padding: 4px 0;
+  cursor: pointer;
+}
+
+.pageMeta {
+  color: var(--chrome-text-muted);
+  font-size: 0.82rem;
+}
+
+.errorText {
+  font-size: 0.82rem;
+  color: #b3261e;
+  margin: 0;
+}
+
+.buttonRow {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-sm);
+  margin-top: var(--space-xs);
+}
+
+.cancelButton {
+  font-family: var(--font-bengali);
+  font-size: 0.85rem;
+  color: var(--chrome-text);
+  background: none;
+  border: 1px solid var(--chrome-border);
+  border-radius: var(--radius-sm);
+  padding: 6px var(--space-md);
+  cursor: pointer;
+}
+
+.cancelButton:hover {
+  border-color: var(--chrome-accent);
+}
+
+.confirmButton {
+  font-family: var(--font-bengali);
+  font-size: 0.85rem;
+  color: #ffffff;
+  background: var(--chrome-accent);
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 6px var(--space-md);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.confirmButton:hover:not(:disabled) {
+  background: var(--chrome-accent-hover);
+}
+
+.confirmButton:disabled,
+.cancelButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}

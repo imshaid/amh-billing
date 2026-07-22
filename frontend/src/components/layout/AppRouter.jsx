@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { useAppState } from "../../state/useAppState.js";
 import { useSets } from "../../hooks/useSets.js";
 import { usePages } from "../../hooks/usePages.js";
@@ -9,6 +9,7 @@ import LandingPage from "../../features/landing/LandingPage.jsx";
 import PreviousSessionsScreen from "../../features/session/PreviousSessionsScreen.jsx";
 import PackagesScreen from "../../features/package-picker/PackagesScreen.jsx";
 import AnalyticsScreen from "../../features/analytics/AnalyticsScreen.jsx";
+import PdfDownloadModal from "../../features/shared/PdfDownloadModal.jsx";
 import styles from "./AppRouter.module.css";
 
 /**
@@ -34,6 +35,7 @@ export default function AppRouter() {
   const { state, dispatch } = useAppState();
   const { sets } = useSets();
   const scrollApiRef = useRef(null);
+  const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
 
   const isWorkspace = state.currentView === "workspace";
   const activeSet = state.activeSetId
@@ -92,7 +94,19 @@ export default function AppRouter() {
         onSetZoomPercent={setZoomPercent}
         onFitWidth={handleFitWidth}
         onFitHeight={handleFitHeight}
+        onOpenPdfDownload={() => setIsPdfModalOpen(true)}
       />
+
+      {isPdfModalOpen && (
+        <PdfDownloadModal
+          pages={pages ?? []}
+          activeSetName={activeSet?.name}
+          getPageElement={(pageId) =>
+            scrollApiRef.current?.getPageElement(pageId) ?? null
+          }
+          onClose={() => setIsPdfModalOpen(false)}
+        />
+      )}
 
       <div className={isWorkspace ? styles.viewAreaNoScroll : styles.viewArea}>
         {state.currentView === "landing" && <LandingPage />}

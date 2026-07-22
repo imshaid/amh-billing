@@ -57,6 +57,7 @@ const NARROW_QUERY = "(max-width: 768px)";
  *   onSetZoomPercent?: (percent: number) => void,
  *   onFitWidth?: () => void,
  *   onFitHeight?: () => void,
+ *   onOpenPdfDownload?: () => void,
  * }} props
  */
 export default function GlobalTopBar({
@@ -72,6 +73,7 @@ export default function GlobalTopBar({
   onSetZoomPercent,
   onFitWidth,
   onFitHeight,
+  onOpenPdfDownload,
 }) {
   const { dispatch } = useAppState();
   const isNarrow = useMediaQuery(NARROW_QUERY);
@@ -120,13 +122,22 @@ export default function GlobalTopBar({
 
         <div className={styles.rightSlot}>
           {isWorkspace && (
-            <button
-              type="button"
-              className={styles.doneButton}
-              onClick={() => dispatch({ type: "GO_HOME" })}
-            >
-              শেষ করুন
-            </button>
+            <>
+              <button
+                type="button"
+                className={styles.pdfButton}
+                onClick={onOpenPdfDownload}
+              >
+                PDF ডাউনলোড
+              </button>
+              <button
+                type="button"
+                className={styles.doneButton}
+                onClick={() => dispatch({ type: "GO_HOME" })}
+              >
+                শেষ করুন
+              </button>
+            </>
           )}
         </div>
       </div>

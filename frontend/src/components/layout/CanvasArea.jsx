@@ -204,6 +204,16 @@ export default function CanvasArea({
           height: el.clientHeight - paddingY,
         };
       },
+      // Used by PdfDownloadModal (see GlobalTopBar's PDF button) to build
+      // the HTML this Set's PDF backend request sends — see
+      // serializePageToHtml.js's own doc comment for why this needs the
+      // page's actual rendered DOM node (not just its data) to correctly
+      // capture the CSS Modules styling that only exists as injected
+      // stylesheets, never as inline attributes on the elements
+      // themselves. Returns null for an unknown pageId rather than
+      // throwing, so a caller iterating a possibly-stale page list can
+      // just skip anything no longer mounted.
+      getPageElement: (pageId) => pageRefs.current.get(pageId) ?? null,
     });
   }
 
