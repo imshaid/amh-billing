@@ -1,0 +1,33 @@
+# Dependencies — never commit installed packages; everyone runs `npm install`
+# themselves from package.json/package-lock.json, which ARE committed.
+node_modules/
+
+# Build output
+dist/
+build/
+.vite/
+
+# Environment files with real secrets — .env.example is committed as a
+# template, but actual .env files (with real Supabase keys, etc) never should be.
+.env
+.env.local
+.env.*.local
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.log
+
+# Editor/IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# Vite/PWA generated files
+dev-dist/
