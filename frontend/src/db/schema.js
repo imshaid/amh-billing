@@ -7,7 +7,14 @@
  *
  * Object stores:
  *   - packages      : reusable menu-item templates (Biscuit, Snacks Basic 2, ...)
- *   - sets          : a working session (1 Bill + N Invoices + 1 Summary, or any mix)
+ *   - sets          : a working session (1 Bill + N Invoices + 1 Summary, or any mix).
+ *                      Also carries `purchaseDate`/`orderedByPerson` (both optional,
+ *                      set via the "নতুন সেশন" modal — see Set.js's own doc comment).
+ *                      Neither gets its own index: there's no query that filters
+ *                      Sets by either field yet, only per-Set reads and a JS-side
+ *                      scan for orderedByPerson's quick-select list (see
+ *                      useOrderedByPersons.js) — small enough at this app's scale
+ *                      to not need one.
  *   - pages         : individual Bill / Invoice / Summary pages
  *   - field_history : recently-used values per field (buyerName, address, ...),
  *                      powers the autocomplete dropdown on those inputs — see

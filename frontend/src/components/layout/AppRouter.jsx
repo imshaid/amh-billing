@@ -99,6 +99,7 @@ export default function AppRouter() {
         {isWorkspace && (
           <WorkspaceView
             activeSetId={state.activeSetId}
+            activeSet={activeSet}
             pages={pages}
             status={status}
             refreshPages={refresh}

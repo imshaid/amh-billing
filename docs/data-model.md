@@ -22,7 +22,7 @@ Package {
 }
 ```
 
-Packages are user-editable (CRUD). Editing a Package only affects *future* line items
+Packages are user-editable (CRUD). Editing a Package only affects _future_ line items
 created from it — see Snapshot Policy below.
 
 ### Page
@@ -63,7 +63,12 @@ LineItem {
 ### Set
 
 A working session: normally one Bill + several Invoices + one Summary, but any
-combination/count is allowed.
+combination/count is allowed. (Design decision as of the "নতুন সেশন"
+redesign: a Set is meant to have exactly _one_ Bill page going forward,
+though multiple Invoice/Summary pages are still fine — this is not yet
+enforced in the UI, so existing/older Sets with multiple Bill pages can
+still exist; enforcing the one-Bill-per-Set rule in CanvasArea/PageActionBar
+is deferred to a later task.)
 
 ```ts
 Set {
@@ -76,9 +81,27 @@ Set {
     defaultPackages: string[]     // Package ids, session-wide
     rowTemplate: LineItem[]       // shape of the first page's rows, copied to new pages
   }
+  purchaseDate: string | null     // ISO date, optional — see below
+  orderedByPerson: string | null  // optional — see below
   pageIds: string[]               // ordered by date, see Page Ordering
 }
 ```
+
+`purchaseDate` and `orderedByPerson` are both collected (optionally — never
+required) via a modal shown on "নতুন সেশন", before the Set is created.
+Neither is ever backfilled/guessed at write time if left blank; `null` here
+always means "the user didn't say". Read-time consumers (currently just the
+Previous Sessions screen) apply their own fallback: `purchaseDate` falls
+back to the Set's earliest Invoice page's own `date`, then to `createdAt`,
+for month-grouping and display purposes — see
+`hooks/useSessionSummaries.js`.
+
+`orderedByPerson` names are stored only on the Set itself for now (no
+separate store/index — see `db/schema.js`) and surfaced as a quick-select
+list by scanning every Set's `orderedByPerson` in JS (see
+`hooks/useOrderedByPersons.js`). This is local-only; Supabase sync for this
+field isn't wired up yet (same as the rest of this app's data — see Local
+Cache Policy below).
 
 ## Snapshot Policy
 
@@ -93,7 +116,7 @@ UI can offer "add another row like this" convenience later; it carries no live b
 
 ## Rate Handling
 
-- `Package.rate` is a *default* — set once per package, edited by the user like any
+- `Package.rate` is a _default_ — set once per package, edited by the user like any
   other package field.
 - When a line item is created from a Package, `LineItem.rate` is copied from
   `Package.rate` at that instant (same snapshot reasoning as above).

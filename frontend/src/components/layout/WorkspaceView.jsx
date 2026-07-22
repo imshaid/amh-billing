@@ -26,6 +26,7 @@ import styles from "./WorkspaceView.module.css";
  *
  * @param {{
  *   activeSetId: string|null,
+ *   activeSet: import('../../domain/models/Set.js').Set|null,
  *   pages: import('../../domain/models/Page.js').Page[]|null,
  *   status: "idle"|"loading"|"ready"|"error",
  *   refreshPages: () => Promise<void>,
@@ -35,6 +36,7 @@ import styles from "./WorkspaceView.module.css";
  */
 export default function WorkspaceView({
   activeSetId,
+  activeSet,
   pages,
   status,
   refreshPages,
@@ -45,6 +47,7 @@ export default function WorkspaceView({
     <div className={styles.shell}>
       <CanvasArea
         activeSetId={activeSetId}
+        activeSet={activeSet}
         pages={pages}
         status={status}
         refreshPages={refreshPages}

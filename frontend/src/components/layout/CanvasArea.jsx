@@ -93,6 +93,7 @@ import styles from "./CanvasArea.module.css";
  *
  * @param {{
  *   activeSetId: string|null,
+ *   activeSet: import('../../domain/models/Set.js').Set|null,
  *   pages: import('../../domain/models/Page.js').Page[]|null,
  *   status: "idle"|"loading"|"ready"|"error",
  *   refreshPages: () => Promise<void>,
@@ -105,6 +106,7 @@ import styles from "./CanvasArea.module.css";
  */
 export default function CanvasArea({
   activeSetId,
+  activeSet,
   pages,
   status,
   refreshPages,
@@ -315,12 +317,21 @@ export default function CanvasArea({
   // here. Summary still goes through `addSummaryPage` even as the first
   // page, since it never copies lineItems from anything regardless of
   // whether a source page exists.
+  //
+  // Both pass `buyerName: activeSet?.defaults?.buyerName` so the name
+  // collected in NewSessionModal (see LandingPage.jsx) actually reaches the
+  // first page instead of staying stranded on the Set — every later
+  // Bill/Invoice/Summary page already inherits buyerName by copying from
+  // whichever page came before it (see duplicatePageAsNew/addSummaryPage's
+  // own doc comments), so this is the one place that copy chain has
+  // nothing to start from yet.
   async function handleCreateFirstPage(type) {
     if (!activeSetId) return;
+    const buyerName = activeSet?.defaults?.buyerName ?? "";
     if (type === "summary") {
-      await addSummaryPage({ setId: activeSetId });
+      await addSummaryPage({ setId: activeSetId, buyerName });
     } else {
-      await addPage({ setId: activeSetId, type });
+      await addPage({ setId: activeSetId, type, buyerName });
     }
     await resyncSetPageOrder(activeSetId);
     await refreshPages();
