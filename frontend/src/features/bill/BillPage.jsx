@@ -24,8 +24,19 @@ import styles from "./BillPage.module.css";
  * Inline-editable: header fields via DocumentHeader's onFieldChange,
  * quantity/rate per line via EditableField (onLineChange).
  *
- * Adding/editing/deleting packages has exactly two entry points, both
- * always visible, no separate "append to end" button:
+ * `canManagePackages` — for BillPage this is always `true` in practice
+ * (Bill is the one page type with unconditional direct package control —
+ * see domain/aggregation/summaryCalculator.js's top comment), but the prop
+ * still exists here (rather than hardcoding) so this component doesn't
+ * need to know or care why; CanvasArea is the one place that decides.
+ * When `false`, the floating "+" and PackageRowMenu (Edit/Delete) don't
+ * render at all — the package name shows as plain text and quantity stays
+ * editable regardless (see BillPage doesn't actually have a false case
+ * today, but InvoicePage does — kept symmetric between the two for a
+ * single shared mental model).
+ *
+ * Adding/editing/deleting packages has exactly two entry points when
+ * `canManagePackages` is true, no separate "append to end" button:
  *   - The floating "+" to the left of every row (onAddAfterLine) — inserts
  *     a new package at that row's position. When the page has zero
  *     lineItems, a single blank placeholder row still renders with this
@@ -39,6 +50,7 @@ import styles from "./BillPage.module.css";
  *   page: import('../../domain/models/Page.js').Page,
  *   onFieldChange: (field: string, value: string) => void,
  *   onLineChange: (lineId: string, field: "quantity"|"rate", value: string) => void,
+ *   canManagePackages: boolean,
  *   onAddAfterLine: (lineId: string|null) => void,
  *   onEditLine: (lineId: string) => void,
  *   onDeleteLine: (lineId: string) => void,
@@ -48,6 +60,7 @@ export default function BillPage({
   page,
   onFieldChange,
   onLineChange,
+  canManagePackages,
   onAddAfterLine,
   onEditLine,
   onDeleteLine,
@@ -75,33 +88,43 @@ export default function BillPage({
           </thead>
           <tbody>
             {page.lineItems.length === 0 ? (
-              <tr>
-                <td className={`${styles.center} ${styles.slCell}`}>
-                  <span className={styles.floatingAddButton}>
-                    <LineItemActions onAdd={() => onAddAfterLine(null)} />
-                  </span>
-                </td>
-                <td className={styles.center}></td>
-                <td></td>
-                <td></td>
-                <td></td>
-                <td></td>
-              </tr>
+              canManagePackages ? (
+                <tr>
+                  <td className={`${styles.center} ${styles.slCell}`}>
+                    <span className={styles.floatingAddButton}>
+                      <LineItemActions onAdd={() => onAddAfterLine(null)} />
+                    </span>
+                  </td>
+                  <td className={styles.center}></td>
+                  <td></td>
+                  <td></td>
+                  <td></td>
+                  <td></td>
+                </tr>
+              ) : null
             ) : (
               page.lineItems.map((line) => (
                 <tr key={line.id}>
                   <td className={`${styles.center} ${styles.slCell}`}>
-                    <span className={styles.floatingAddButton}>
-                      <LineItemActions onAdd={() => onAddAfterLine(line.id)} />
-                    </span>
+                    {canManagePackages && (
+                      <span className={styles.floatingAddButton}>
+                        <LineItemActions
+                          onAdd={() => onAddAfterLine(line.id)}
+                        />
+                      </span>
+                    )}
                     {line.sl}
                   </td>
                   <td className={styles.center}>
-                    <PackageRowMenu
-                      packageName={line.packageName}
-                      onEdit={() => onEditLine(line.id)}
-                      onDelete={() => onDeleteLine(line.id)}
-                    />
+                    {canManagePackages ? (
+                      <PackageRowMenu
+                        packageName={line.packageName}
+                        onEdit={() => onEditLine(line.id)}
+                        onDelete={() => onDeleteLine(line.id)}
+                      />
+                    ) : (
+                      line.packageName
+                    )}
                   </td>
                   <td>
                     <ol className={styles.itemsList}>

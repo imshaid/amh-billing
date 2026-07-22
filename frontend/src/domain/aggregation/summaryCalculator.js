@@ -1,104 +1,61 @@
 /**
- * Builds/recomputes a Summary page's line items from the Invoice pages in
- * the same Set. See "Summary Page" in docs/data-model.md:
- *   - quantity per package = sum across all Invoice pages in the Set
- *   - a manually-edited quantity stops recomputing until reset
+ * Package-list sync and quantity aggregation for Invoice/Summary pages.
  *
- * Falls back to the Set's Bill pages for which *packages* to list (not
- * quantities) when there are no Invoice pages yet — see
- * `packagesFromBillPages`. Without this, adding a Summary page to a Set
- * that only has a Bill (no Invoice created yet) would show a completely
- * empty table even though the Bill's packages are sitting right there,
- * which reads as broken rather than "correctly waiting for invoices."
+ * Per the corrected mental model (see docs/data-model.md's now-superseded
+ * "Summary Page" section — this file is the actual current behavior):
+ * Bill is the one page type where packages are directly added/edited/
+ * deleted by the user. Invoice and Summary are otherwise completely normal,
+ * independently-editable pages (their own lineItems persist in IndexedDB
+ * like any other page — nothing here wholesale-replaces lineItems on every
+ * render the way the old recomputeSummaryLines did), EXCEPT:
+ *   - Their *package list* (which packages appear at all, and each
+ *     package's name/items/rate) stays synced to the Set's Bill page(s)
+ *     as long as at least one Bill page exists in the Set. The user cannot
+ *     add/edit/delete packages directly on Invoice/Summary while a Bill
+ *     exists — see CanvasArea, which disables those controls in that case.
+ *     If a Set has zero Bill pages, Invoice regains full direct package
+ *     control (this sync becomes a no-op with nothing to sync from).
+ *   - Summary ADDITIONALLY overwrites `quantity` on every line by summing
+ *     the Set's Invoice pages (never Bill quantities) — this is the one
+ *     thing that still recomputes continuously, since it's meant to always
+ *     reflect current invoice totals. A Summary line's quantity is only
+ *     ever user-editable in the sense that typing over it works, but the
+ *     very next recompute overwrites it again — there is no
+ *     "quantityIsOverridden" escape hatch anymore now that Summary is
+ *     understood as "an Invoice page whose quantity happens to be a live
+ *     total," per the explicit requirement that all three page types share
+ *     identical package-row functionality.
+ *
+ * Multiple Bill pages in a Set are assumed to carry the same packages (per
+ * project confirmation — "multiple bill may exist, but all have the same
+ * packages, not different"), so only the first Bill page (by the Set's
+ * existing date ordering) is consulted as the sync source; there is no
+ * merge/union logic across multiple Bills.
  */
 
 /**
- * @param {import('../models/Page.js').Page[]} invoicePages
- * @returns {Map<string, { packageId: string|null, packageName: string, items: {id:string,text:string}[], quantity: number }>}
- *          keyed by packageId (falls back to packageName if packageId is null,
- *          so hand-typed rows without a linked Package still aggregate correctly)
- */
-function sumQuantitiesByPackage(invoicePages) {
-  const totals = new Map();
-
-  for (const page of invoicePages) {
-    for (const line of page.lineItems) {
-      const key = line.packageId ?? `name:${line.packageName}`;
-      const existing = totals.get(key);
-      const qty = line.quantity ?? 0;
-
-      if (existing) {
-        existing.quantity += qty;
-      } else {
-        totals.set(key, {
-          packageId: line.packageId,
-          packageName: line.packageName,
-          items: line.items,
-          quantity: qty,
-        });
-      }
-    }
-  }
-
-  return totals;
-}
-
-/**
- * Fallback used only when there are zero Invoice pages in the Set: lists
- * every distinct package that appears across the Set's Bill pages, with
- * quantity fixed at 0 (there is no invoice data yet to sum — this is a
- * "here's what's expected to show up" placeholder, not a real total, and
- * is never treated as overridden so it starts auto-summing for real the
- * moment an actual Invoice page/line exists).
+ * Syncs an Invoice or Summary page's package list to match a Bill page's
+ * packages — adds lines for packages present on the Bill but missing here,
+ * removes lines for packages that are on this page but no longer on the
+ * Bill, and refreshes packageName/items/rate for lines that still match
+ * (in case the Bill's own package edit changed them). Crucially, this
+ * NEVER touches `quantity`/`quantityIsOverridden` on a line that already
+ * exists here — quantity is independently editable and this sync must not
+ * clobber it.
  *
- * @param {import('../models/Page.js').Page[]} billPages
- * @returns {Map<string, { packageId: string|null, packageName: string, items: {id:string,text:string}[], quantity: number }>}
- */
-function packagesFromBillPages(billPages) {
-  const totals = new Map();
-
-  for (const page of billPages) {
-    for (const line of page.lineItems) {
-      const key = line.packageId ?? `name:${line.packageName}`;
-      if (totals.has(key)) continue;
-      totals.set(key, {
-        packageId: line.packageId,
-        packageName: line.packageName,
-        items: line.items,
-        quantity: 0,
-      });
-    }
-  }
-
-  return totals;
-}
-
-/**
- * Recomputes a Summary page's line items against the current Invoice pages
- * in its Set (or, if there are none yet, against the Set's Bill pages —
- * see `packagesFromBillPages`). Lines with `quantityIsOverridden: true`
- * keep their manually set quantity; everything else is replaced with the
- * fresh sum.
+ * If `billPage` is null (no Bill page exists in the Set), returns `page`
+ * completely unchanged — direct package control on Invoice takes over
+ * instead (see CanvasArea).
  *
- * New packages that appear in the invoices but have no existing Summary line
- * yet are appended as new lines (not overridden).
- *
- * @param {import('../models/Page.js').Page} summaryPage
- * @param {import('../models/Page.js').Page[]} invoicePages
- * @param {import('../models/Page.js').Page[]} [billPages]  Only consulted when invoicePages is empty.
+ * @param {import('../models/Page.js').Page} page  an Invoice or Summary page
+ * @param {import('../models/Page.js').Page|null} billPage
  * @returns {import('../models/Page.js').Page}
  */
-export function recomputeSummaryLines(
-  summaryPage,
-  invoicePages,
-  billPages = [],
-) {
-  const totals =
-    invoicePages.length > 0
-      ? sumQuantitiesByPackage(invoicePages)
-      : packagesFromBillPages(billPages);
+export function syncPackagesFromBill(page, billPage) {
+  if (!billPage) return page;
+
   const existingByKey = new Map(
-    summaryPage.lineItems.map((line) => [
+    page.lineItems.map((line) => [
       line.packageId ?? `name:${line.packageName}`,
       line,
     ]),
@@ -107,59 +64,52 @@ export function recomputeSummaryLines(
   const nextLineItems = [];
   let sl = 1;
 
-  for (const [key, totalEntry] of totals) {
-    const existingLine = existingByKey.get(key);
-
-    if (existingLine?.quantityIsOverridden) {
-      nextLineItems.push({ ...existingLine, sl: sl++ });
-      continue;
-    }
+  for (const billLine of billPage.lineItems) {
+    const key = billLine.packageId ?? `name:${billLine.packageName}`;
+    const existing = existingByKey.get(key);
 
     nextLineItems.push({
-      id: existingLine?.id ?? crypto.randomUUID(),
+      id: existing?.id ?? crypto.randomUUID(),
       sl: sl++,
-      packageId: totalEntry.packageId,
-      packageName: totalEntry.packageName,
-      items: totalEntry.items,
-      quantity: totalEntry.quantity,
-      rate: existingLine?.rate ?? null,
+      packageId: billLine.packageId,
+      packageName: billLine.packageName,
+      items: billLine.items,
+      quantity: existing?.quantity ?? null,
+      rate: billLine.rate,
       amount: null,
-      amountIsOverridden: existingLine?.amountIsOverridden ?? false,
-      quantityIsOverridden: false,
+      amountIsOverridden: existing?.amountIsOverridden ?? false,
+      quantityIsOverridden: existing?.quantityIsOverridden ?? false,
     });
   }
 
-  return { ...summaryPage, lineItems: nextLineItems };
+  return { ...page, lineItems: nextLineItems };
 }
 
 /**
- * Marks a specific Summary line's quantity as user-overridden.
+ * Overwrites a Summary page's line quantities by summing the matching
+ * package's quantity across the Set's Invoice pages. Called AFTER
+ * `syncPackagesFromBill` has already established the correct package list
+ * for this Summary page, so this only ever updates `quantity` on lines
+ * that already exist — it does not add or remove lines itself.
+ *
  * @param {import('../models/Page.js').Page} summaryPage
- * @param {string} lineItemId
- * @param {number} quantity
+ * @param {import('../models/Page.js').Page[]} invoicePages
+ * @returns {import('../models/Page.js').Page}
  */
-export function overrideSummaryLineQuantity(summaryPage, lineItemId, quantity) {
-  return {
-    ...summaryPage,
-    lineItems: summaryPage.lineItems.map((line) =>
-      line.id === lineItemId
-        ? { ...line, quantity, quantityIsOverridden: true }
-        : line,
-    ),
-  };
-}
+export function sumInvoiceQuantities(summaryPage, invoicePages) {
+  const totals = new Map();
+  for (const invoicePage of invoicePages) {
+    for (const line of invoicePage.lineItems) {
+      const key = line.packageId ?? `name:${line.packageName}`;
+      totals.set(key, (totals.get(key) ?? 0) + (line.quantity ?? 0));
+    }
+  }
 
-/**
- * Resets a Summary line's override so it goes back to auto-summing on the
- * next `recomputeSummaryLines` call.
- * @param {import('../models/Page.js').Page} summaryPage
- * @param {string} lineItemId
- */
-export function resetSummaryLineOverride(summaryPage, lineItemId) {
   return {
     ...summaryPage,
-    lineItems: summaryPage.lineItems.map((line) =>
-      line.id === lineItemId ? { ...line, quantityIsOverridden: false } : line,
-    ),
+    lineItems: summaryPage.lineItems.map((line) => {
+      const key = line.packageId ?? `name:${line.packageName}`;
+      return { ...line, quantity: totals.get(key) ?? 0 };
+    }),
   };
 }

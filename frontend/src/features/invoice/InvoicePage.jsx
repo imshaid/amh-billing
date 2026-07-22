@@ -13,15 +13,25 @@ import styles from "./InvoicePage.module.css";
  * Bill, hence the shared DocumentHeader component.
  *
  * A Summary page is mechanically this same component — see
- * docs/data-model.md "Summary Page" — with buyerName left as whatever
- * carried over from the page it was created under (see createSummaryPage)
- * and address/date/serialOrLogCode left blank by default; quantity values
- * are live-aggregated from the Set's Invoice pages (or Bill pages as a
- * fallback — see summaryCalculator.js) rather than typed in directly.
- * `onFieldChange`/`onLineChange`/`onAddAfterLine`/`onEditLine`/
- * `onDeleteLine` are still passed for a Summary page (its quantity
- * overrides use the same onLineChange path — see useRenderedPages' summary
- * aggregation for how `quantityIsOverridden` is respected).
+ * domain/aggregation/summaryCalculator.js's top doc comment for the current
+ * (corrected) model: buyerName carries over from whatever page it was
+ * created under (see createSummaryPage), address/date/serialOrLogCode start
+ * blank, its package list stays synced to the Set's Bill page exactly like
+ * Invoice's does, and its quantity is additionally overwritten every render
+ * by summing the Set's Invoice pages — see `sumInvoiceQuantities`. Unlike
+ * the old model, there is no "quantityIsOverridden" escape hatch anymore;
+ * Summary's quantity is always a live total, same as any other page's
+ * quantity field is always directly editable, it just gets recomputed
+ * continuously.
+ *
+ * `canManagePackages` — false whenever a Bill page exists in the Set (Bill
+ * is then the sole source of truth for packages — see CanvasArea, which
+ * computes this) or whenever this is a Summary page (Summary never gets
+ * direct package control, since it cannot exist without a Bill or Invoice
+ * already present to summarize). True only for a standalone Invoice in a
+ * Set with no Bill page at all. When false, the floating "+" and
+ * PackageRowMenu (Edit/Delete) don't render — package name shows as plain
+ * text — but the quantity field stays directly editable regardless.
  *
  * The table is exactly the original 4 columns (SL, Package, Items,
  * Quantity) — no extra column for the "+" button. Same technique as
@@ -30,16 +40,11 @@ import styles from "./InvoicePage.module.css";
  * `position: absolute` with a negative left offset, outside the table's
  * own left edge — it never occupies its own cell or changes colspan.
  *
- * Adding/editing/deleting packages has exactly two entry points, same as
- * BillPage: the floating "+" to the left of every row (inserts at that
- * position, and is the only control shown on a lone blank placeholder row
- * when lineItems is empty), and clicking a row's package name (Edit
- * replaces the package, Delete removes the row after confirmation).
- *
  * @param {{
  *   page: import('../../domain/models/Page.js').Page,
  *   onFieldChange: (field: string, value: string) => void,
  *   onLineChange: (lineId: string, field: "quantity"|"rate", value: string) => void,
+ *   canManagePackages: boolean,
  *   onAddAfterLine: (lineId: string|null) => void,
  *   onEditLine: (lineId: string) => void,
  *   onDeleteLine: (lineId: string) => void,
@@ -49,6 +54,7 @@ export default function InvoicePage({
   page,
   onFieldChange,
   onLineChange,
+  canManagePackages,
   onAddAfterLine,
   onEditLine,
   onDeleteLine,
@@ -74,31 +80,41 @@ export default function InvoicePage({
           </thead>
           <tbody>
             {page.lineItems.length === 0 ? (
-              <tr>
-                <td className={`${styles.center} ${styles.slCell}`}>
-                  <span className={styles.floatingAddButton}>
-                    <LineItemActions onAdd={() => onAddAfterLine(null)} />
-                  </span>
-                </td>
-                <td className={styles.center}></td>
-                <td></td>
-                <td></td>
-              </tr>
+              canManagePackages ? (
+                <tr>
+                  <td className={`${styles.center} ${styles.slCell}`}>
+                    <span className={styles.floatingAddButton}>
+                      <LineItemActions onAdd={() => onAddAfterLine(null)} />
+                    </span>
+                  </td>
+                  <td className={styles.center}></td>
+                  <td></td>
+                  <td></td>
+                </tr>
+              ) : null
             ) : (
               page.lineItems.map((line) => (
                 <tr key={line.id}>
                   <td className={`${styles.center} ${styles.slCell}`}>
-                    <span className={styles.floatingAddButton}>
-                      <LineItemActions onAdd={() => onAddAfterLine(line.id)} />
-                    </span>
+                    {canManagePackages && (
+                      <span className={styles.floatingAddButton}>
+                        <LineItemActions
+                          onAdd={() => onAddAfterLine(line.id)}
+                        />
+                      </span>
+                    )}
                     {line.sl}
                   </td>
                   <td className={styles.center}>
-                    <PackageRowMenu
-                      packageName={line.packageName}
-                      onEdit={() => onEditLine(line.id)}
-                      onDelete={() => onDeleteLine(line.id)}
-                    />
+                    {canManagePackages ? (
+                      <PackageRowMenu
+                        packageName={line.packageName}
+                        onEdit={() => onEditLine(line.id)}
+                        onDelete={() => onDeleteLine(line.id)}
+                      />
+                    ) : (
+                      line.packageName
+                    )}
                   </td>
                   <td>
                     <ol className={styles.itemsList}>

@@ -14,15 +14,8 @@ import BillPage from "../../features/bill/BillPage.jsx";
 import InvoicePage from "../../features/invoice/InvoicePage.jsx";
 import PackagePickerPopup from "../../features/package-picker/PackagePickerPopup.jsx";
 import ConfirmDialog from "../../features/shared/ConfirmDialog.jsx";
-import ScopeConfirmDialog from "../../features/shared/ScopeConfirmDialog.jsx";
 import PageActionBar from "./PageActionBar.jsx";
 import styles from "./CanvasArea.module.css";
-
-/** Fields where a "apply to all pages too?" prompt makes sense — these are
- * the ones commonly identical across an entire Set (same buyer, same
- * address). Date and serialOrLogCode are excluded on purpose: those
- * legitimately differ per page and should never trigger this prompt. */
-const SCOPE_PROMPTABLE_FIELDS = new Set(["buyerName", "address"]);
 
 /**
  * Renders every Page in the active Set as one continuous scrollable canvas
@@ -41,11 +34,12 @@ const SCOPE_PROMPTABLE_FIELDS = new Set(["buyerName", "address"]);
  * buyerName/address/date/lineItems into a fresh page via `addDuplicatedPage`
  * (see domain/models/Page.js's duplicatePageAsNew), never starting blank.
  * Summary is different: only buyerName carries over (see createSummaryPage's
- * doc comment) and its lineItems are always derived at render time from the
- * Set's Invoice/Bill pages, never copied — so "+ নতুন সামারি" goes through
- * `addSummaryPage` instead. There is deliberately no "duplicate" button
- * separate from these — the Bill/Invoice add buttons already are the
- * duplicate action.
+ * doc comment) — its lineItems start empty and are then populated by the
+ * same Bill-sync/Invoice-sum logic every other Summary page already gets
+ * (see useRenderedPages), not copied from any specific source page — so
+ * "+ নতুন সামারি" goes through `addSummaryPage` instead. There is
+ * deliberately no "duplicate" button separate from these — the Bill/Invoice
+ * add buttons already are the duplicate action.
  *
  * Inline edits write straight to IndexedDB via `updateDraftPage` — this is
  * safe because, per the History Edit Policy in docs/data-model.md, a page
@@ -55,8 +49,23 @@ const SCOPE_PROMPTABLE_FIELDS = new Set(["buyerName", "address"]);
  * state (and therefore live totals every other page depends on, e.g.
  * Summary) updates immediately.
  *
- * Packages have exactly two entry points per row, both always visible —
- * see BillPage/InvoicePage's own doc comments for the full rationale:
+ * Package management model (see domain/aggregation/summaryCalculator.js's
+ * top doc comment for the full rationale): Bill is the only page type
+ * where the user directly adds/edits/deletes packages. Invoice and Summary
+ * are otherwise completely normal, independently-editable pages (their
+ * quantity field is always directly editable), but their *package list*
+ * stays synced to the Set's Bill page as long as one exists —
+ * `useRenderedPages` handles that sync every render, and `canManagePackages`
+ * (computed below from whether any Bill page exists) disables the
+ * add/edit/delete controls on Invoice/Summary in that case. If a Set has no
+ * Bill page at all, Invoice regains full direct package control (the sync
+ * has nothing to sync from) — Summary never gets direct control either
+ * way, since a Summary page cannot exist without at least a Bill or
+ * Invoice already present in the Set to summarize.
+ *
+ * Packages have exactly two entry points per row, both always visible on
+ * pages where `canManagePackages` is true — see BillPage/InvoicePage's own
+ * doc comments for the full rationale:
  *   - The "+" to the left of every row (LineItemActions) inserts a new
  *     package at that row's position; when a page has zero lineItems, a
  *     single blank placeholder row still shows this button.
@@ -73,6 +82,14 @@ const SCOPE_PROMPTABLE_FIELDS = new Set(["buyerName", "address"]);
  * set so already-added packages show dimmed and un-clickable (no duplicate
  * packages within one table); see `existingPackageIds` for how "replace"
  * mode excludes the very line being replaced from that check.
+ *
+ * There is no "apply to all pages?" prompt anywhere in this component —
+ * every field edit and package add/edit/delete applies immediately and
+ * only to the page it was performed on (packages additionally propagate
+ * to Invoice/Summary automatically via the Bill-sync described above, but
+ * that's a passive consequence of the sync, not a choice the user is asked
+ * to make). The only confirmation dialog in this file is for delete (page
+ * delete and line-item delete, both via ConfirmDialog).
  *
  * @param {{
  *   activeSetId: string|null,
@@ -104,12 +121,6 @@ export default function CanvasArea({
   const [deletingPageId, setDeletingPageId] = useState(null);
   // { pageId, lineId } for a line item awaiting delete confirmation.
   const [deletingLineItem, setDeletingLineItem] = useState(null);
-  // Holds a change that just committed on one page and might also apply to
-  // every other page in the Set, awaiting the user's scope choice (see
-  // ScopeConfirmDialog). Shape depends on `kind`:
-  //   { kind: "field", pageId, field, value }
-  //   { kind: "package", pageId, pkg, lineItemId }
-  const [pendingScopeChange, setPendingScopeChange] = useState(null);
 
   if (registerScrollApi) {
     registerScrollApi({
@@ -124,50 +135,14 @@ export default function CanvasArea({
   async function handleFieldChange(pageId, field, value) {
     await updateDraftPage(pageId, { [field]: value });
     await refreshPages();
-    if (SCOPE_PROMPTABLE_FIELDS.has(field) && renderedPages.length > 1) {
-      setPendingScopeChange({ kind: "field", pageId, field, value });
-    }
-  }
-
-  async function handleApplyScopeToAll() {
-    if (!pendingScopeChange) return;
-    const { kind, pageId, field, value, pkg } = pendingScopeChange;
-    const otherPages = renderedPages.filter((p) => p.id !== pageId);
-
-    if (kind === "field") {
-      await Promise.all(
-        otherPages.map((p) => updateDraftPage(p.id, { [field]: value })),
-      );
-    } else if (kind === "package") {
-      // Skip any page that already has this exact package — same duplicate
-      // prevention rule as the picker itself (see PackagePickerPopup).
-      await Promise.all(
-        otherPages
-          .filter((p) => !p.lineItems.some((line) => line.packageId === pkg.id))
-          .map((p) => {
-            const nextSl = p.lineItems.length + 1;
-            const newLine = createLineItemFromPackage(pkg, { sl: nextSl });
-            return updateDraftPage(p.id, {
-              lineItems: [...p.lineItems, newLine],
-            });
-          }),
-      );
-    }
-
-    await refreshPages();
-    setPendingScopeChange(null);
   }
 
   async function handleLineChange(pageId, lineId, field, value) {
-    // For a Summary page, `lineItems` in raw storage may not yet contain
-    // this line at all — recomputeSummaryLines (see useRenderedPages) only
-    // materializes Summary lineItems at render time; nothing is written
-    // back to IndexedDB until an override actually happens. So the line
-    // being edited must be looked up in `renderedPages` (the aggregated
-    // view), not `pages` (raw storage), or the edit silently finds nothing
-    // to match and is lost. For Bill/Invoice pages the two are equivalent
-    // for lineItems (only bill totals differ), so this is safe for every
-    // page type, not just Summary.
+    // For any page, `lineItems` in raw storage might have a slightly
+    // different package set than what's currently rendered if a Bill-sync
+    // (see syncPackagesFromBill in useRenderedPages) is pending — the line
+    // being edited must be looked up in `renderedPages` (the synced view),
+    // not `pages` (raw storage), or the edit could target a stale line id.
     const page = renderedPages.find((p) => p.id === pageId);
     if (!page) return;
     const numericValue = value === "" ? null : Number(value);
@@ -224,9 +199,6 @@ export default function CanvasArea({
     await updateDraftPage(pageId, { lineItems: renumbered(nextLineItems) });
     await refreshPages();
     setPackagePickerContext(null);
-    if (mode !== "replace" && renderedPages.length > 1) {
-      setPendingScopeChange({ kind: "package", pageId, pkg });
-    }
   }
 
   async function handleConfirmDeleteLineItem() {
@@ -246,10 +218,10 @@ export default function CanvasArea({
     const sourcePage = renderedPages.find((p) => p.id === sourcePageId);
     if (!sourcePage) return;
     // Summary is not a duplicate of sourcePage — only buyerName carries
-    // over, and its lineItems are always derived at render time (see
-    // recomputeSummaryLines / useRenderedPages), never copied. See
-    // createSummaryPage's doc comment for why this needs its own path
-    // instead of duplicatePageAsNew.
+    // over, and its lineItems start empty, then get populated by the
+    // Bill-sync/Invoice-sum logic every Summary page gets (see
+    // useRenderedPages), never copied. See createSummaryPage's doc comment
+    // for why this needs its own path instead of duplicatePageAsNew.
     const newPage =
       type === "summary"
         ? await addSummaryPage({
@@ -356,80 +328,98 @@ export default function CanvasArea({
       .filter(Boolean),
   );
 
+  // Whether ANY Bill page exists in this Set — see this file's top doc
+  // comment and domain/aggregation/summaryCalculator.js for the full
+  // rationale: as long as one Bill page exists, it is the sole source of
+  // truth for package add/edit/delete, and Invoice/Summary's package lists
+  // just follow along via useRenderedPages' sync. Bill itself always
+  // manages its own packages regardless.
+  const hasBillPage = renderedPages.some((p) => p.type === "bill");
+
   return (
     <div className={styles.canvas}>
-      {renderedPages.map((page) => (
-        <div
-          key={page.id}
-          ref={(el) => {
-            if (el) pageRefs.current.set(page.id, el);
-            else pageRefs.current.delete(page.id);
-          }}
-        >
-          <div className={styles.pageWrapper} style={{ zoom }}>
-            {page.type === "bill" ? (
-              <BillPage
-                page={page}
-                onFieldChange={(field, value) =>
-                  handleFieldChange(page.id, field, value)
-                }
-                onLineChange={(lineId, field, value) =>
-                  handleLineChange(page.id, lineId, field, value)
-                }
-                onAddAfterLine={(lineId) =>
-                  setPackagePickerContext({
-                    pageId: page.id,
-                    mode: "insertAfter",
-                    afterLineId: lineId,
-                  })
-                }
-                onEditLine={(lineId) =>
-                  setPackagePickerContext({
-                    pageId: page.id,
-                    mode: "replace",
-                    replaceLineId: lineId,
-                  })
-                }
-                onDeleteLine={(lineId) =>
-                  setDeletingLineItem({ pageId: page.id, lineId })
-                }
-              />
-            ) : (
-              <InvoicePage
-                page={page}
-                onFieldChange={(field, value) =>
-                  handleFieldChange(page.id, field, value)
-                }
-                onLineChange={(lineId, field, value) =>
-                  handleLineChange(page.id, lineId, field, value)
-                }
-                onAddAfterLine={(lineId) =>
-                  setPackagePickerContext({
-                    pageId: page.id,
-                    mode: "insertAfter",
-                    afterLineId: lineId,
-                  })
-                }
-                onEditLine={(lineId) =>
-                  setPackagePickerContext({
-                    pageId: page.id,
-                    mode: "replace",
-                    replaceLineId: lineId,
-                  })
-                }
-                onDeleteLine={(lineId) =>
-                  setDeletingLineItem({ pageId: page.id, lineId })
-                }
-              />
-            )}
-          </div>
+      {renderedPages.map((page) => {
+        const canManagePackages =
+          page.type === "bill"
+            ? true
+            : page.type === "invoice"
+              ? !hasBillPage
+              : false;
+        return (
+          <div
+            key={page.id}
+            ref={(el) => {
+              if (el) pageRefs.current.set(page.id, el);
+              else pageRefs.current.delete(page.id);
+            }}
+          >
+            <div className={styles.pageWrapper} style={{ zoom }}>
+              {page.type === "bill" ? (
+                <BillPage
+                  page={page}
+                  onFieldChange={(field, value) =>
+                    handleFieldChange(page.id, field, value)
+                  }
+                  onLineChange={(lineId, field, value) =>
+                    handleLineChange(page.id, lineId, field, value)
+                  }
+                  canManagePackages={canManagePackages}
+                  onAddAfterLine={(lineId) =>
+                    setPackagePickerContext({
+                      pageId: page.id,
+                      mode: "insertAfter",
+                      afterLineId: lineId,
+                    })
+                  }
+                  onEditLine={(lineId) =>
+                    setPackagePickerContext({
+                      pageId: page.id,
+                      mode: "replace",
+                      replaceLineId: lineId,
+                    })
+                  }
+                  onDeleteLine={(lineId) =>
+                    setDeletingLineItem({ pageId: page.id, lineId })
+                  }
+                />
+              ) : (
+                <InvoicePage
+                  page={page}
+                  onFieldChange={(field, value) =>
+                    handleFieldChange(page.id, field, value)
+                  }
+                  onLineChange={(lineId, field, value) =>
+                    handleLineChange(page.id, lineId, field, value)
+                  }
+                  canManagePackages={canManagePackages}
+                  onAddAfterLine={(lineId) =>
+                    setPackagePickerContext({
+                      pageId: page.id,
+                      mode: "insertAfter",
+                      afterLineId: lineId,
+                    })
+                  }
+                  onEditLine={(lineId) =>
+                    setPackagePickerContext({
+                      pageId: page.id,
+                      mode: "replace",
+                      replaceLineId: lineId,
+                    })
+                  }
+                  onDeleteLine={(lineId) =>
+                    setDeletingLineItem({ pageId: page.id, lineId })
+                  }
+                />
+              )}
+            </div>
 
-          <PageActionBar
-            onAddPage={(type) => handleAddPageAfter(page.id, type)}
-            onDelete={() => setDeletingPageId(page.id)}
-          />
-        </div>
-      ))}
+            <PageActionBar
+              onAddPage={(type) => handleAddPageAfter(page.id, type)}
+              onDelete={() => setDeletingPageId(page.id)}
+            />
+          </div>
+        );
+      })}
 
       {packagePickerContext && (
         <PackagePickerPopup
@@ -457,18 +447,6 @@ export default function CanvasArea({
           message="এই প্যাকেজটা ডিলিট করতে চান? এটা আর ফেরানো যাবে না।"
           onConfirm={handleConfirmDeleteLineItem}
           onCancel={() => setDeletingLineItem(null)}
-        />
-      )}
-
-      {pendingScopeChange && (
-        <ScopeConfirmDialog
-          message={
-            pendingScopeChange.kind === "package"
-              ? `"${pendingScopeChange.pkg.name}" প্যাকেজটা কি সেশনের বাকি পেজগুলোতেও যোগ করতে চান?`
-              : "এই তথ্য কি সেশনের বাকি পেজগুলোতেও আপডেট করতে চান?"
-          }
-          onApplyToAll={handleApplyScopeToAll}
-          onApplyToThisOnly={() => setPendingScopeChange(null)}
         />
       )}
     </div>
