@@ -23,6 +23,18 @@
   background: var(--chrome-accent-bg);
 }
 
+.addButton:disabled {
+  color: var(--chrome-text-muted);
+  border-color: var(--chrome-border);
+  background: var(--chrome-bg, #f4f6fb);
+  cursor: not-allowed;
+}
+
+.addButton:disabled:hover {
+  border-color: var(--chrome-border);
+  background: var(--chrome-bg, #f4f6fb);
+}
+
 .deleteButton {
   font-family: var(--font-bengali);
   font-size: 0.82rem;

@@ -64,11 +64,18 @@ LineItem {
 
 A working session: normally one Bill + several Invoices + one Summary, but any
 combination/count is allowed. (Design decision as of the "নতুন সেশন"
-redesign: a Set is meant to have exactly _one_ Bill page going forward,
-though multiple Invoice/Summary pages are still fine — this is not yet
-enforced in the UI, so existing/older Sets with multiple Bill pages can
-still exist; enforcing the one-Bill-per-Set rule in CanvasArea/PageActionBar
-is deferred to a later task.)
+redesign: a Set is meant to have exactly _one_ Bill page — enforced in the
+UI as of the fix described below. Existing/older Sets created before this
+rule existed can still have more than one Bill page; the enforcement only
+blocks _creating_ another Bill once one exists, it does not touch, warn
+about, or let the user resolve pre-existing multi-Bill Sets. Enforcement:
+`CanvasArea.jsx` computes `hasBillPage` from the Set's rendered pages and
+passes it down as `disableBill` to every page's `PageActionBar`, which
+disables — not hides — its own "+ নতুন বিল" button once true, so the
+button's presence still communicates "this is one of the three page types
+this app has." `handleAddPageAfter` repeats the same check defensively
+before actually creating a page, rather than trusting only the disabled
+button.)
 
 ```ts
 Set {

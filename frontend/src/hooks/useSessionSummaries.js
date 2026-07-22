@@ -13,15 +13,16 @@ import { recomputeBillTotals } from "../domain/aggregation/billCalculator.js";
  * @property {number|null} total       The Bill page's total, live-recomputed
  *   from its own lineItems via `recomputeBillTotals` (same function
  *   CanvasArea's `useRenderedPages` uses for the on-screen view) rather
- *   than trusting the Bill page's raw stored `total` field. Storage writes
- *   from quantity/rate edits (see CanvasArea's `handleLineChange`) only
- *   ever persist the edited `lineItems` themselves — `total`/line `amount`
- *   are recomputed on the fly for display and were never written back to
- *   IndexedDB, so the raw stored value can be stale or still `null` even
- *   after the Bill page visibly shows a correct total in the workspace.
- *   Recomputing here (same as the workspace already does) is what makes
- *   this screen agree with what the user actually sees on the Bill page,
- *   without changing anything about how edits get saved.
+ *   than trusting the Bill page's raw stored `total` field directly. This
+ *   used to be the only place `total`/line `amount` ever got recomputed at
+ *   all — CanvasArea's line-item edits only persisted the edited
+ *   `lineItems` themselves, leaving the raw stored `total` stale or `null`.
+ *   That write-time gap is now fixed too (see CanvasArea's `saveLineItems`
+ *   helper, which recomputes before every `lineItems` write), so the raw
+ *   stored `total` should normally already be correct for any page edited
+ *   after that fix landed. Recomputing here regardless costs nothing and
+ *   stays as a second line of defense for any Page written before that fix
+ *   existed, or written by some future code path that forgets to.
  * @property {string|null} displayDate The date actually shown in the list:
  *   `set.purchaseDate` if the user provided one, else the earliest Invoice
  *   page's `date`, else `set.createdAt`. See Set.js's own doc comment on

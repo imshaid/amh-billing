@@ -10,6 +10,7 @@ import {
 } from "../../db/pages.repository.js";
 import { resyncSetPageOrder } from "../../db/sets.repository.js";
 import { createLineItemFromPackage } from "../../domain/models/Page.js";
+import { recomputeBillTotals } from "../../domain/aggregation/billCalculator.js";
 import BillPage from "../../features/bill/BillPage.jsx";
 import InvoicePage from "../../features/invoice/InvoicePage.jsx";
 import PackagePickerPopup from "../../features/package-picker/PackagePickerPopup.jsx";
@@ -211,6 +212,51 @@ export default function CanvasArea({
     await refreshPages();
   }
 
+  /**
+   * Persists a page's `lineItems`, recomputing each line's `amount` and the
+   * page's own `total` first via `recomputeBillTotals` — the same function
+   * `useRenderedPages` already applies for the on-screen view. This used to
+   * be a plain `updateDraftPage(pageId, { lineItems })` at each of this
+   * file's three lineItems-mutating call sites (quantity/rate edits,
+   * picking a package, deleting a line item); none of them recomputed
+   * amount/total before saving, so raw storage could keep an amount/total
+   * that was stale or still `null` even though the workspace visibly showed
+   * the correct number (recomputed live, in memory, by useRenderedPages,
+   * but never written back). That mismatch is what
+   * useSessionSummaries.js's Previous Sessions total was actually reading —
+   * this is the write-time half of that fix; useSessionSummaries.js's own
+   * read-time recompute stays in place too as a second line of defense for
+   * any Page written before this change existed.
+   *
+   * Reads `totalIsOverridden` off the page currently in `renderedPages`
+   * (not hardcoded to `false`) so a page whose total the user has
+   * explicitly overridden keeps that override intact — recomputeBillTotals
+   * already respects that flag (see billCalculator.js), this just needs to
+   * actually pass the real current value in rather than silently resetting
+   * it on every single line-item edit.
+   *
+   * Safe to call for every page type, not just "bill": `recomputeBillTotals`
+   * only touches `lineItems`/`total`, and an Invoice/Summary page's `total`
+   * field is simply unused elsewhere (see BillPage vs InvoicePage — only
+   * BillPage renders a total row), so recomputing it there is inert rather
+   * than wrong.
+   *
+   * @param {string} pageId
+   * @param {import('../../domain/models/Page.js').LineItem[]} lineItems
+   */
+  async function saveLineItems(pageId, lineItems) {
+    const currentPage = renderedPages.find((p) => p.id === pageId);
+    const { lineItems: recomputedLineItems, total } = recomputeBillTotals({
+      lineItems,
+      totalIsOverridden: currentPage?.totalIsOverridden ?? false,
+      total: currentPage?.total ?? null,
+    });
+    await updateDraftPage(pageId, {
+      lineItems: recomputedLineItems,
+      total,
+    });
+  }
+
   async function handleLineChange(pageId, lineId, field, value) {
     // For any page, `lineItems` in raw storage might have a slightly
     // different package set than what's currently rendered if a Bill-sync
@@ -227,7 +273,7 @@ export default function CanvasArea({
         ? { ...line, [field]: numericValue, [overrideFlag]: true }
         : line,
     );
-    await updateDraftPage(pageId, { lineItems: nextLineItems });
+    await saveLineItems(pageId, nextLineItems);
     await refreshPages();
   }
 
@@ -270,7 +316,7 @@ export default function CanvasArea({
       );
     }
 
-    await updateDraftPage(pageId, { lineItems: renumbered(nextLineItems) });
+    await saveLineItems(pageId, renumbered(nextLineItems));
     await refreshPages();
     setPackagePickerContext(null);
   }
@@ -283,7 +329,7 @@ export default function CanvasArea({
     const nextLineItems = renumbered(
       page.lineItems.filter((line) => line.id !== lineId),
     );
-    await updateDraftPage(pageId, { lineItems: nextLineItems });
+    await saveLineItems(pageId, nextLineItems);
     await refreshPages();
     setDeletingLineItem(null);
   }
@@ -291,6 +337,11 @@ export default function CanvasArea({
   async function handleAddPageAfter(sourcePageId, type) {
     const sourcePage = renderedPages.find((p) => p.id === sourcePageId);
     if (!sourcePage) return;
+    // Defensive guard matching PageActionBar's `disableBill` — the button
+    // itself is disabled once a Bill page already exists, but this repeats
+    // the check here too rather than trusting only the disabled attribute,
+    // in case this ever gets called some other way.
+    if (type === "bill" && hasBillPage) return;
     // Summary is not a duplicate of sourcePage — only buyerName carries
     // over, and its lineItems start empty, then get populated by the
     // Bill-sync/Invoice-sum logic every Summary page gets (see
@@ -410,12 +461,20 @@ export default function CanvasArea({
       .filter(Boolean),
   );
 
-  // Whether ANY Bill page exists in this Set — see this file's top doc
-  // comment and domain/aggregation/summaryCalculator.js for the full
-  // rationale: as long as one Bill page exists, it is the sole source of
-  // truth for package add/edit/delete, and Invoice/Summary's package lists
-  // just follow along via useRenderedPages' sync. Bill itself always
-  // manages its own packages regardless.
+  // Whether ANY Bill page exists in this Set — used for two things:
+  //   1. Package-management gating (original purpose — see this file's top
+  //      doc comment and domain/aggregation/summaryCalculator.js for the
+  //      full rationale): as long as one Bill page exists, it is the sole
+  //      source of truth for package add/edit/delete, and Invoice/Summary's
+  //      package lists just follow along via useRenderedPages' sync. Bill
+  //      itself always manages its own packages regardless.
+  //   2. Disabling every "+ নতুন বিল" button in every PageActionBar (see
+  //      `disableBill` below and PageActionBar.jsx) — per the design
+  //      decision that a Set should have exactly one Bill page (see
+  //      docs/data-model.md's Set section). Older Sets created before that
+  //      rule existed can still have more than one Bill page; this only
+  //      blocks *creating* another, it doesn't touch or warn about existing
+  //      ones.
   const hasBillPage = renderedPages.some((p) => p.type === "bill");
 
   return (
@@ -498,6 +557,7 @@ export default function CanvasArea({
             <PageActionBar
               onAddPage={(type) => handleAddPageAfter(page.id, type)}
               onDelete={() => setDeletingPageId(page.id)}
+              disableBill={hasBillPage}
             />
           </div>
         );
