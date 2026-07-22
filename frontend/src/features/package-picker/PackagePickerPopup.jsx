@@ -4,16 +4,22 @@ import PackageChip from "./PackageChip.jsx";
 import styles from "./PackagePickerPopup.module.css";
 
 /**
- * Popup opened by a page's row-level "+ যোগ করুন" button (see BillPage/
- * InvoicePage's onAddRow). Picking a package here always targets the page
- * that triggered it — the caller (CanvasArea) tracks which page id opened
- * the popup and passes the resulting package back to that page's own
- * add-line-item handler; this component itself is page-agnostic.
+ * Popup opened from a page's package-related triggers — a row's "+" button
+ * (insert a new package after that row, or as the first item on an empty
+ * page) or a row's package-name click → Edit (replace that row's package)
+ * — see BillPage/InvoicePage's onAddAfterLine/onEditLine. Picking a package here
+ * always targets whichever page (and, for insert/replace, line) triggered
+ * it — the caller (CanvasArea) tracks that via `packagePickerContext` and
+ * passes the resulting package back to the right handler; this component
+ * itself doesn't know or care which of the three modes opened it, beyond
+ * the `heading` text the caller supplies for it.
  *
  * `existingPackageIds` — the packageId set already present as line items on
  * the target page — disables (and visually dims, see PackageChip) any
  * package already added, enforcing "no duplicate packages in a table"
- * without a separate confirmation step.
+ * without a separate confirmation step. In "replace" mode the caller
+ * excludes the line being replaced from this set (see CanvasArea), so a
+ * line's own current package doesn't show dimmed against itself.
  *
  * A search box live-filters the grid by name as the user types, since with
  * 35+ packages across categories, scrolling to find one by eye doesn't
@@ -23,12 +29,14 @@ import styles from "./PackagePickerPopup.module.css";
  *   onPick: (pkg: import('../../domain/models/Package.js').Package) => void,
  *   onClose: () => void,
  *   existingPackageIds: Set<string>,
+ *   heading?: string,
  * }} props
  */
 export default function PackagePickerPopup({
   onPick,
   onClose,
   existingPackageIds,
+  heading = "প্যাকেজ বেছে নিন",
 }) {
   const { groupedPackages, status } = usePackages();
   const [query, setQuery] = useState("");
@@ -48,7 +56,7 @@ export default function PackagePickerPopup({
   return (
     <div className={styles.overlay} onClick={onClose}>
       <div className={styles.popup} onClick={(e) => e.stopPropagation()}>
-        <p className={styles.heading}>প্যাকেজ বেছে নিন</p>
+        <p className={styles.heading}>{heading}</p>
 
         <input
           type="text"

@@ -39,13 +39,18 @@ import { snapshotPackageItems } from "./Package.js";
  * `packageId` is kept only as a convenience reference for "add another row
  * like this" — it must never be treated as a live binding to the Package.
  *
+ * `id` can be supplied to keep an existing line's identity while replacing
+ * its package entirely (see CanvasArea's "replace" mode for the line-item
+ * Edit button — "picked the wrong package" — which swaps the snapshot but
+ * keeps the same row/id rather than deleting and re-inserting).
+ *
  * @param {import('./Package.js').Package} pkg
- * @param {{ sl: number, quantity?: number|null }} opts
+ * @param {{ sl: number, quantity?: number|null, id?: string }} opts
  * @returns {LineItem}
  */
-export function createLineItemFromPackage(pkg, { sl, quantity = null }) {
+export function createLineItemFromPackage(pkg, { sl, quantity = null, id }) {
   return {
-    id: crypto.randomUUID(),
+    id: id ?? crypto.randomUUID(),
     sl,
     packageId: pkg.id,
     packageName: pkg.name,

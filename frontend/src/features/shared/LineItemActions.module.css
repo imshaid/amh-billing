@@ -1,0 +1,20 @@
+.addButton {
+  width: 22px;
+  height: 22px;
+  line-height: 1;
+  font-size: 0.9rem;
+  border: 1px solid var(--chrome-border);
+  border-radius: 3px;
+  background: #ffffff;
+  color: var(--chrome-accent);
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.addButton:hover {
+  border-color: var(--chrome-accent);
+  background: var(--chrome-accent-bg);
+}

@@ -19,6 +19,20 @@
   flex-direction: column;
 }
 
+.tableWrapper {
+  /* NOT a margin/width change — the table inside is exactly 100% width,
+     completely unaffected. `position: relative` here only gives
+     .floatingAddButton (position: absolute, negative left offset) a
+     positioning context so it can sit in the page's own existing padding
+     (see .page's padding: 12mm) to the left of the table, without taking
+     an inch of space away from the table itself. An earlier version of
+     this wrapper used `margin-left` to "make room" for the button, which
+     was wrong — it shrank the table and shifted it visibly off the page's
+     left margin instead of just floating the button in space that was
+     already empty. */
+  position: relative;
+}
+
 .table {
   width: 100%;
   table-layout: fixed;
@@ -57,6 +71,20 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* The SL cell is the anchor for its row's floating "+" button — see
+   BillPage.module.css's identical comment for the full rationale. */
+.slCell {
+  position: relative;
+}
+
+.floatingAddButton {
+  position: absolute;
+  left: -22px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 2;
+}
+
 .center {
   text-align: center;
 }
@@ -70,26 +98,6 @@
 
 .itemsList li {
   margin: 3.5px 0;
-}
-
-.addRowCell {
-  padding: 4px 8px;
-}
-
-.addRowButton {
-  font-family: var(--font-bengali, inherit);
-  font-size: 0.8rem;
-  color: var(--chrome-accent);
-  background: none;
-  border: 1px dashed var(--chrome-border);
-  border-radius: 4px;
-  padding: 3px 10px;
-  cursor: pointer;
-}
-
-.addRowButton:hover {
-  border-color: var(--chrome-accent);
-  background: var(--chrome-accent-bg);
 }
 
 .signatureRow {

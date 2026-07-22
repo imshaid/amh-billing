@@ -1,0 +1,50 @@
+.trigger {
+  border: none;
+  background: none;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  text-align: center;
+  padding: 0;
+  text-decoration: underline dotted;
+  text-underline-offset: 2px;
+}
+
+.trigger:hover {
+  color: var(--chrome-accent);
+}
+
+.menu {
+  background: #ffffff;
+  border: 1px solid var(--chrome-border);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  display: flex;
+  flex-direction: column;
+  z-index: 46;
+  min-width: 120px;
+  overflow: hidden;
+}
+
+.menuItem {
+  font-family: var(--font-bengali, inherit);
+  font-size: 0.85rem;
+  text-align: left;
+  padding: 8px 14px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--chrome-text);
+}
+
+.menuItem:hover {
+  background: var(--chrome-bg);
+}
+
+.menuItemDelete {
+  color: #b3261e;
+}
+
+.menuItemDelete:hover {
+  background: #fdecea;
+}

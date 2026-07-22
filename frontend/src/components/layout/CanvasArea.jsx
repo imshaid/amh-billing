@@ -55,11 +55,24 @@ const SCOPE_PROMPTABLE_FIELDS = new Set(["buyerName", "address"]);
  * state (and therefore live totals every other page depends on, e.g.
  * Summary) updates immediately.
  *
+ * Packages have exactly two entry points per row, both always visible —
+ * see BillPage/InvoicePage's own doc comments for the full rationale:
+ *   - The "+" to the left of every row (LineItemActions) inserts a new
+ *     package at that row's position; when a page has zero lineItems, a
+ *     single blank placeholder row still shows this button.
+ *   - Clicking a row's package name (PackageRowMenu) opens Edit (replace
+ *     this row's package) / Delete (remove this row, after confirmation).
+ * There is no separate "append to end" control — every add is anchored to
+ * a specific row (or the blank placeholder), which is what
+ * `packagePickerContext`'s `mode: "insertAfter"|"replace"` tracks.
+ *
  * The package-picker popup is owned here (not inside BillPage/InvoicePage)
- * because it needs to know which page triggered it (`addingToPageId`) and
- * hands the result back to that exact page's line items. It also receives
- * that page's current packageId set so already-added packages show dimmed
- * and un-clickable (no duplicate packages within one table).
+ * because it needs to know which page — and, for insert/replace, which
+ * line — triggered it (`packagePickerContext`), and hands the result back
+ * to that exact page/line. It also receives that page's current packageId
+ * set so already-added packages show dimmed and un-clickable (no duplicate
+ * packages within one table); see `existingPackageIds` for how "replace"
+ * mode excludes the very line being replaced from that check.
  *
  * @param {{
  *   activeSetId: string|null,
@@ -80,8 +93,17 @@ export default function CanvasArea({
 }) {
   const renderedPages = sortPagesForDisplay(useRenderedPages(pages));
   const pageRefs = useRef(new Map());
-  const [addingToPageId, setAddingToPageId] = useState(null);
+  // Replaces the old plain `addingToPageId` string — the package picker now
+  // has two distinct triggers (insert after a specific line, or replace a
+  // specific line's package), both needing to know which page and which
+  // line (if any) they're targeting.
+  // Shape: { pageId, mode: "insertAfter"|"replace", afterLineId?: string|null, replaceLineId? }
+  // `afterLineId: null` means "this page currently has zero line items" —
+  // the picked package becomes the page's first (and only) line.
+  const [packagePickerContext, setPackagePickerContext] = useState(null);
   const [deletingPageId, setDeletingPageId] = useState(null);
+  // { pageId, lineId } for a line item awaiting delete confirmation.
+  const [deletingLineItem, setDeletingLineItem] = useState(null);
   // Holds a change that just committed on one page and might also apply to
   // every other page in the Set, awaiting the user's scope choice (see
   // ScopeConfirmDialog). Shape depends on `kind`:
@@ -160,18 +182,64 @@ export default function CanvasArea({
     await refreshPages();
   }
 
+  /** Renumbers every line item's `sl` to 1..N in its current order — called
+   * after any insert/delete so SL always reflects actual row position, per
+   * the requirement that SL stays correct after add/delete. */
+  function renumbered(lineItems) {
+    return lineItems.map((line, i) => ({ ...line, sl: i + 1 }));
+  }
+
   async function handlePickPackage(pkg) {
-    const page = renderedPages.find((p) => p.id === addingToPageId);
+    if (!packagePickerContext) return;
+    const { pageId, mode, afterLineId, replaceLineId } = packagePickerContext;
+    const page = renderedPages.find((p) => p.id === pageId);
     if (!page) return;
-    const nextSl = page.lineItems.length + 1;
-    const newLine = createLineItemFromPackage(pkg, { sl: nextSl });
-    await updateDraftPage(page.id, { lineItems: [...page.lineItems, newLine] });
-    await refreshPages();
-    const targetPageId = addingToPageId;
-    setAddingToPageId(null);
-    if (renderedPages.length > 1) {
-      setPendingScopeChange({ kind: "package", pageId: targetPageId, pkg });
+
+    let nextLineItems;
+    if (mode === "insertAfter") {
+      const newLine = createLineItemFromPackage(pkg, { sl: 0 });
+      if (afterLineId === null) {
+        // Page had zero line items (the blank placeholder row) — this
+        // becomes the only one.
+        nextLineItems = [newLine];
+      } else {
+        const index = page.lineItems.findIndex((l) => l.id === afterLineId);
+        nextLineItems = [
+          ...page.lineItems.slice(0, index + 1),
+          newLine,
+          ...page.lineItems.slice(index + 1),
+        ];
+      }
+    } else {
+      // "replace" — a fresh snapshot of the newly picked package takes over
+      // this row entirely; quantity resets (it described the old package,
+      // not this one) and override flags clear along with it.
+      nextLineItems = page.lineItems.map((line) =>
+        line.id === replaceLineId
+          ? createLineItemFromPackage(pkg, { sl: 0, id: line.id })
+          : line,
+      );
     }
+
+    await updateDraftPage(pageId, { lineItems: renumbered(nextLineItems) });
+    await refreshPages();
+    setPackagePickerContext(null);
+    if (mode !== "replace" && renderedPages.length > 1) {
+      setPendingScopeChange({ kind: "package", pageId, pkg });
+    }
+  }
+
+  async function handleConfirmDeleteLineItem() {
+    if (!deletingLineItem) return;
+    const { pageId, lineId } = deletingLineItem;
+    const page = renderedPages.find((p) => p.id === pageId);
+    if (!page) return;
+    const nextLineItems = renumbered(
+      page.lineItems.filter((line) => line.id !== lineId),
+    );
+    await updateDraftPage(pageId, { lineItems: nextLineItems });
+    await refreshPages();
+    setDeletingLineItem(null);
   }
 
   async function handleAddPageAfter(sourcePageId, type) {
@@ -274,9 +342,16 @@ export default function CanvasArea({
     );
   }
 
-  const addingToPage = renderedPages.find((p) => p.id === addingToPageId);
+  const packagePickerPage = packagePickerContext
+    ? renderedPages.find((p) => p.id === packagePickerContext.pageId)
+    : null;
+  // For "replace" mode, the line being replaced shouldn't count as "already
+  // added" against itself — otherwise its own current package would show
+  // dimmed in the picker, which would be confusing when the whole point is
+  // to pick something different (or even re-confirm the same one).
   const existingPackageIds = new Set(
-    (addingToPage?.lineItems ?? [])
+    (packagePickerPage?.lineItems ?? [])
+      .filter((line) => line.id !== packagePickerContext?.replaceLineId)
       .map((line) => line.packageId)
       .filter(Boolean),
   );
@@ -301,7 +376,23 @@ export default function CanvasArea({
                 onLineChange={(lineId, field, value) =>
                   handleLineChange(page.id, lineId, field, value)
                 }
-                onAddRow={() => setAddingToPageId(page.id)}
+                onAddAfterLine={(lineId) =>
+                  setPackagePickerContext({
+                    pageId: page.id,
+                    mode: "insertAfter",
+                    afterLineId: lineId,
+                  })
+                }
+                onEditLine={(lineId) =>
+                  setPackagePickerContext({
+                    pageId: page.id,
+                    mode: "replace",
+                    replaceLineId: lineId,
+                  })
+                }
+                onDeleteLine={(lineId) =>
+                  setDeletingLineItem({ pageId: page.id, lineId })
+                }
               />
             ) : (
               <InvoicePage
@@ -312,7 +403,23 @@ export default function CanvasArea({
                 onLineChange={(lineId, field, value) =>
                   handleLineChange(page.id, lineId, field, value)
                 }
-                onAddRow={() => setAddingToPageId(page.id)}
+                onAddAfterLine={(lineId) =>
+                  setPackagePickerContext({
+                    pageId: page.id,
+                    mode: "insertAfter",
+                    afterLineId: lineId,
+                  })
+                }
+                onEditLine={(lineId) =>
+                  setPackagePickerContext({
+                    pageId: page.id,
+                    mode: "replace",
+                    replaceLineId: lineId,
+                  })
+                }
+                onDeleteLine={(lineId) =>
+                  setDeletingLineItem({ pageId: page.id, lineId })
+                }
               />
             )}
           </div>
@@ -324,11 +431,16 @@ export default function CanvasArea({
         </div>
       ))}
 
-      {addingToPageId && (
+      {packagePickerContext && (
         <PackagePickerPopup
           onPick={handlePickPackage}
-          onClose={() => setAddingToPageId(null)}
+          onClose={() => setPackagePickerContext(null)}
           existingPackageIds={existingPackageIds}
+          heading={
+            packagePickerContext.mode === "replace"
+              ? "প্যাকেজ পরিবর্তন করুন"
+              : "প্যাকেজ বেছে নিন"
+          }
         />
       )}
 
@@ -337,6 +449,14 @@ export default function CanvasArea({
           message="এই পেজটা ডিলিট করতে চান? এটা আর ফেরানো যাবে না।"
           onConfirm={handleConfirmDeletePage}
           onCancel={() => setDeletingPageId(null)}
+        />
+      )}
+
+      {deletingLineItem && (
+        <ConfirmDialog
+          message="এই প্যাকেজটা ডিলিট করতে চান? এটা আর ফেরানো যাবে না।"
+          onConfirm={handleConfirmDeleteLineItem}
+          onCancel={() => setDeletingLineItem(null)}
         />
       )}
 
