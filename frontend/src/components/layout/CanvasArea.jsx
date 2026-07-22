@@ -318,13 +318,12 @@ export default function CanvasArea({
   // page, since it never copies lineItems from anything regardless of
   // whether a source page exists.
   //
-  // Both pass `buyerName: activeSet?.defaults?.buyerName` so the name
-  // collected in NewSessionModal (see LandingPage.jsx) actually reaches the
-  // first page instead of staying stranded on the Set — every later
-  // Bill/Invoice/Summary page already inherits buyerName by copying from
-  // whichever page came before it (see duplicatePageAsNew/addSummaryPage's
-  // own doc comments), so this is the one place that copy chain has
-  // nothing to start from yet.
+  // `activeSet?.defaults?.buyerName` is read here for backward
+  // compatibility (an older flow, or a future one, could still set it),
+  // but NewSessionModal itself no longer collects buyer name (see
+  // LandingPage.jsx's doc comment) — buyer name is expected to be typed
+  // directly into this first page via its own EditableField instead, so
+  // this will normally just resolve to "" for a brand new session.
   async function handleCreateFirstPage(type) {
     if (!activeSetId) return;
     const buyerName = activeSet?.defaults?.buyerName ?? "";

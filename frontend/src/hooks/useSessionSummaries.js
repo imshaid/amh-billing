@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { getPagesBySet } from "../db/pages.repository.js";
+import { recomputeBillTotals } from "../domain/aggregation/billCalculator.js";
 
 /**
  * @typedef {Object} SessionSummary
@@ -9,9 +10,18 @@ import { getPagesBySet } from "../db/pages.repository.js";
  *   though multiple Invoice/Summary pages are fine — see
  *   docs/data-model.md). Falls back to `set.defaults.buyerName` if there's
  *   no Bill page yet (a brand new, still-empty session).
- * @property {number|null} total       The Bill page's own `total` (already
- *   live-maintained — see billCalculator.js — so this is a direct read, not
- *   a re-sum of anything).
+ * @property {number|null} total       The Bill page's total, live-recomputed
+ *   from its own lineItems via `recomputeBillTotals` (same function
+ *   CanvasArea's `useRenderedPages` uses for the on-screen view) rather
+ *   than trusting the Bill page's raw stored `total` field. Storage writes
+ *   from quantity/rate edits (see CanvasArea's `handleLineChange`) only
+ *   ever persist the edited `lineItems` themselves — `total`/line `amount`
+ *   are recomputed on the fly for display and were never written back to
+ *   IndexedDB, so the raw stored value can be stale or still `null` even
+ *   after the Bill page visibly shows a correct total in the workspace.
+ *   Recomputing here (same as the workspace already does) is what makes
+ *   this screen agree with what the user actually sees on the Bill page,
+ *   without changing anything about how edits get saved.
  * @property {string|null} displayDate The date actually shown in the list:
  *   `set.purchaseDate` if the user provided one, else the earliest Invoice
  *   page's `date`, else `set.createdAt`. See Set.js's own doc comment on
@@ -57,7 +67,7 @@ export function useSessionSummaries(sets) {
             return {
               set,
               buyerName: billPage?.buyerName || set.defaults?.buyerName || "",
-              total: billPage?.total ?? null,
+              total: billPage ? recomputeBillTotals(billPage).total : null,
               displayDate:
                 set.purchaseDate || firstInvoice?.date || set.createdAt,
               orderedByPerson: set.orderedByPerson ?? null,

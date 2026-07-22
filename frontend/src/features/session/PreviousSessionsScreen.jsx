@@ -1,7 +1,11 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useAppState } from "../../state/useAppState.js";
 import { useSets } from "../../hooks/useSets.js";
 import { useSessionSummaries } from "../../hooks/useSessionSummaries.js";
+import { useOrderedByPersons } from "../../hooks/useOrderedByPersons.js";
+import { updateSet, deleteSet } from "../../db/sets.repository.js";
+import ConfirmDialog from "../shared/ConfirmDialog.jsx";
+import EditSessionModal from "./EditSessionModal.jsx";
 import styles from "./PreviousSessionsScreen.module.css";
 
 const BN_DIGITS = ["০", "১", "২", "৩", "৪", "৫", "৬", "৭", "৮", "৯"];
@@ -45,48 +49,76 @@ function monthKey(isoDate) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 }
 
+/** "৳১,৪২,০৫৫" style — Bangla digits, always shown (0 shown as "৳০" rather
+ * than a bare dash) so a session with an as-yet-unfilled Bill page reads as
+ * "zero so far", not as a missing/broken field. */
 function formatAmount(total) {
-  if (total == null) return null;
-  return toBanglaDigits(
-    total.toLocaleString("en-US", { maximumFractionDigits: 0 }),
-  );
+  const safeTotal = total ?? 0;
+  return `৳${toBanglaDigits(safeTotal.toLocaleString("en-US", { maximumFractionDigits: 0 }))}`;
 }
 
 /**
  * Full-screen browser for every Set, reached from the landing page's
  * "আগের সেশনসমূহ" card.
  *
- * Redesigned per an explicit design request to show each session's actual
- * billing context — buyer name, purchase date, total amount (from the
- * Set's Bill page), and who placed the order — instead of just the Set's
- * bare name and page count. All of that comes from `useSessionSummaries`,
- * which does the per-Set Page lookups this screen itself has no reason to
- * know about.
+ * Shows each session's buyer name, purchase date, total amount (from the
+ * Set's Bill page), and who placed the order — all from
+ * `useSessionSummaries`, which does the per-Set Page lookups this screen
+ * itself has no reason to know about.
+ *
+ * Each row is a card: buyer name + amount on top, then a secondary
+ * dot-separated meta line (date / ordered-by / page count), and a
+ * three-dot overflow menu on the right for Edit/Delete — added per an
+ * explicit design request, since a session's purchaseDate/orderedByPerson
+ * (collected once at creation via NewSessionModal) previously had no way
+ * to be corrected afterward, and there was no way to remove a session at
+ * all from this screen.
+ *
+ * The overflow menu's own click needs `stopPropagation` — the card itself
+ * is a button that opens the session (OPEN_SESSION), so without stopping
+ * propagation, clicking the three-dot icon would both open the menu AND
+ * navigate into the session underneath it.
+ *
+ * Edit opens EditSessionModal (purchaseDate/orderedByPerson only — not
+ * Set.name, not buyer name, see that component's own doc comment) and
+ * saves via `updateSet`. Delete always confirms first via the shared
+ * ConfirmDialog (same as every other delete in this app — see
+ * CanvasArea's page/line-item deletes) before calling `deleteSet`, which
+ * now also cascades to delete every Page under that Set (see
+ * db/sets.repository.js's own doc comment on why that cascade was added).
  *
  * Sessions are grouped under month-divider headings (calendar month, day 1
  * to day 30/31 — not a rolling 30-day window), using each session's
  * `displayDate` — see useSessionSummaries.js's own doc comment for that
  * field's purchaseDate → first-Invoice-date → createdAt fallback chain.
- * Groups are ordered most-recent-month-first, matching `useSets`'s overall
- * most-recently-updated-first convention; within a month, sessions keep
- * whatever order `useSets`/`useSessionSummaries` already produced (also
- * recency, via `updatedAt`) rather than being re-sorted by displayDate,
- * since displayDate is a mix of purchase/invoice/created dates and isn't
- * reliably comparable enough to be a good *within-group* sort key too.
  *
- * Search filters client-side on `set.name` only, same as before — there's
- * no dedicated search index in IndexedDB (see db/schema.js) and the
- * expected number of Sets for a single hotel's billing history doesn't
- * call for one yet.
+ * Search filters client-side on `set.name` only — there's no dedicated
+ * search index in IndexedDB (see db/schema.js) and the expected number of
+ * Sets for a single hotel's billing history doesn't call for one yet.
  *
- * Selecting a row dispatches OPEN_SESSION (same action LandingPage's "New
- * Session" card uses) so both paths land in WorkspaceView identically.
+ * Selecting a row (anywhere except the overflow menu) dispatches
+ * OPEN_SESSION (same action LandingPage's "New Session" card uses) so both
+ * paths land in WorkspaceView identically.
  */
 export default function PreviousSessionsScreen() {
   const { dispatch } = useAppState();
-  const { sets, status: setsStatus } = useSets();
+  const { sets, status: setsStatus, refresh: refreshSets } = useSets();
   const { summaries, status: summariesStatus } = useSessionSummaries(sets);
+  const previousPersons = useOrderedByPersons(sets);
   const [query, setQuery] = useState("");
+  const [openMenuSetId, setOpenMenuSetId] = useState(null);
+  const [editingSet, setEditingSet] = useState(null);
+  const [deletingSet, setDeletingSet] = useState(null);
+  const menuRef = useRef(null);
+
+  useEffect(() => {
+    if (!openMenuSetId) return;
+    function handleClickOutside(e) {
+      if (!menuRef.current?.contains(e.target)) setOpenMenuSetId(null);
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [openMenuSetId]);
 
   const status =
     setsStatus === "error" || summariesStatus === "error"
@@ -119,6 +151,18 @@ export default function PreviousSessionsScreen() {
       b.key.localeCompare(a.key),
     );
   }, [filteredSummaries]);
+
+  async function handleConfirmEdit({ purchaseDate, orderedByPerson }) {
+    await updateSet(editingSet.id, { purchaseDate, orderedByPerson });
+    setEditingSet(null);
+    await refreshSets();
+  }
+
+  async function handleConfirmDelete() {
+    await deleteSet(deletingSet.id);
+    setDeletingSet(null);
+    await refreshSets();
+  }
 
   return (
     <div className={styles.screen}>
@@ -160,42 +204,112 @@ export default function PreviousSessionsScreen() {
                     displayDate,
                     orderedByPerson,
                     pageCount,
-                  }) => (
-                    <button
-                      key={set.id}
-                      className={styles.row}
-                      onClick={() =>
-                        dispatch({ type: "OPEN_SESSION", payload: set.id })
-                      }
-                    >
-                      <div className={styles.rowMain}>
-                        <span className={styles.rowName}>
-                          {buyerName || set.name || "শিরোনামহীন সেশন"}
-                        </span>
-                        <span className={styles.rowDate}>
-                          {formatDisplayDate(displayDate)}
-                        </span>
+                  }) => {
+                    const formattedDate = formatDisplayDate(displayDate);
+                    return (
+                      <div key={set.id} className={styles.row}>
+                        <button
+                          type="button"
+                          className={styles.rowClickArea}
+                          onClick={() =>
+                            dispatch({ type: "OPEN_SESSION", payload: set.id })
+                          }
+                        >
+                          <div className={styles.rowTop}>
+                            <span className={styles.rowName}>
+                              {buyerName || set.name || "শিরোনামহীন সেশন"}
+                            </span>
+                            <span className={styles.rowAmount}>
+                              {formatAmount(total)}
+                            </span>
+                          </div>
+                          <div className={styles.rowMeta}>
+                            {formattedDate && (
+                              <span className={styles.rowMetaItem}>
+                                {formattedDate}
+                              </span>
+                            )}
+                            {orderedByPerson && (
+                              <span className={styles.rowMetaItem}>
+                                অর্ডার করেছেন: {orderedByPerson}
+                              </span>
+                            )}
+                            <span className={styles.rowMetaItem}>
+                              {toBanglaDigits(pageCount)} টি পেজ
+                            </span>
+                          </div>
+                        </button>
+
+                        <div
+                          className={styles.menuWrapper}
+                          ref={openMenuSetId === set.id ? menuRef : null}
+                        >
+                          <button
+                            type="button"
+                            className={styles.menuButton}
+                            aria-label="আরও অপশন"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setOpenMenuSetId((current) =>
+                                current === set.id ? null : set.id,
+                              );
+                            }}
+                          >
+                            ⋮
+                          </button>
+                          {openMenuSetId === set.id && (
+                            <div className={styles.menuDropdown}>
+                              <button
+                                type="button"
+                                className={styles.menuItem}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setOpenMenuSetId(null);
+                                  setEditingSet(set);
+                                }}
+                              >
+                                এডিট
+                              </button>
+                              <button
+                                type="button"
+                                className={styles.menuItemDanger}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setOpenMenuSetId(null);
+                                  setDeletingSet(set);
+                                }}
+                              >
+                                ডিলিট
+                              </button>
+                            </div>
+                          )}
+                        </div>
                       </div>
-                      <div className={styles.rowDetails}>
-                        {orderedByPerson && (
-                          <span className={styles.rowDetail}>
-                            অর্ডার করেছেন: {orderedByPerson}
-                          </span>
-                        )}
-                        <span className={styles.rowDetail}>
-                          {toBanglaDigits(pageCount)} টি পেজ
-                        </span>
-                      </div>
-                      <span className={styles.rowAmount}>
-                        {total != null ? `৳${formatAmount(total)}` : "—"}
-                      </span>
-                    </button>
-                  ),
+                    );
+                  },
                 )}
               </div>
             </div>
           ))}
         </div>
+      )}
+
+      {editingSet && (
+        <EditSessionModal
+          set={editingSet}
+          previousPersons={previousPersons}
+          onConfirm={handleConfirmEdit}
+          onCancel={() => setEditingSet(null)}
+        />
+      )}
+
+      {deletingSet && (
+        <ConfirmDialog
+          message={`"${deletingSet.name || "শিরোনামহীন সেশন"}" সেশনটি ডিলিট করবেন? এর সব বিল/চালান/সামারি পেজও মুছে যাবে। এই কাজ পূর্বাবস্থায় ফেরানো যাবে না।`}
+          confirmLabel="ডিলিট"
+          onConfirm={handleConfirmDelete}
+          onCancel={() => setDeletingSet(null)}
+        />
       )}
     </div>
   );

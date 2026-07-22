@@ -42,12 +42,14 @@
 
 /* Sticky so a long session list can scroll under its own month heading,
    same convention as a mail client's date dividers this feature was
-   modeled after (see the design conversation this screen came out of). */
+   modeled after. */
 .monthHeading {
   font-family: var(--font-bengali);
-  font-size: 0.85rem;
+  font-size: 0.78rem;
   font-weight: 600;
+  letter-spacing: 0.02em;
   color: var(--chrome-text-muted);
+  text-transform: uppercase;
   margin: 0;
   padding: 4px 0;
   position: sticky;
@@ -62,69 +64,181 @@
   gap: var(--space-sm);
 }
 
+/* Each session is a card with two parts side by side: `.rowClickArea` (the
+   actual "open this session" button — buyer name + amount on top, a
+   secondary dot-separated meta line underneath) and `.menuWrapper` (the
+   three-dot overflow menu). `.row` itself is just the outer flex
+   container/card chrome (border, hover elevation) — it used to BE the
+   button in an earlier version of this screen, before Edit/Delete needed
+   their own click target that must NOT also trigger OPEN_SESSION. */
 .row {
   display: flex;
-  flex-direction: column;
-  gap: 4px;
+  align-items: stretch;
+  gap: var(--space-sm);
   background: #ffffff;
   border: 1px solid var(--chrome-border);
   border-radius: var(--radius-md);
-  padding: var(--space-md);
-  cursor: pointer;
-  text-align: left;
   font-family: var(--font-bengali);
   width: 100%;
   box-sizing: border-box;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
   position: relative;
 }
 
 .row:hover {
   border-color: var(--chrome-accent);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
-.rowMain {
+.rowClickArea {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+  background: none;
+  border: none;
+  padding: var(--space-md) var(--space-lg);
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+}
+
+.rowTop {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
   gap: var(--space-md);
-  padding-right: 90px; /* keeps the absolutely-positioned amount from overlapping the name on narrow rows */
 }
 
 .rowName {
-  font-size: 0.95rem;
-  font-weight: 500;
+  font-size: 1rem;
+  font-weight: 600;
   color: var(--chrome-text);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  min-width: 0;
 }
 
-.rowDate {
-  font-size: 0.8rem;
-  color: var(--chrome-text-muted);
+.rowAmount {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--chrome-accent);
   white-space: nowrap;
   flex-shrink: 0;
 }
 
-.rowDetails {
+.rowMeta {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-md);
-}
-
-.rowDetail {
+  align-items: center;
+  gap: 8px;
   font-size: 0.8rem;
   color: var(--chrome-text-muted);
 }
 
-.rowAmount {
+/* Dot separators between meta items, drawn with a pseudo-element on every
+   item after the first rather than putting literal "•" text nodes in the
+   markup — keeps the JSX free of decorative punctuation and lets this
+   collapse cleanly if an item (e.g. orderedByPerson) is conditionally
+   absent, since there's simply one fewer .rowMetaItem rather than a
+   dangling separator. */
+.rowMetaItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.rowMetaItem:not(:first-child)::before {
+  content: "";
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--chrome-text-muted);
+  flex-shrink: 0;
+}
+
+/* Three-dot overflow menu — sits beside .rowClickArea, not inside it, so
+   its own click never bubbles into the "open session" button underneath
+   (see PreviousSessionsScreen.jsx's stopPropagation calls, which handle
+   the JS side of the same concern). */
+.menuWrapper {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  padding: var(--space-md) var(--space-md) 0 0;
+  flex-shrink: 0;
+}
+
+.menuButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  font-size: 1.1rem;
+  line-height: 1;
+  color: var(--chrome-text-muted);
+  background: none;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.menuButton:hover {
+  background: var(--chrome-bg, #f4f6fb);
+  color: var(--chrome-text);
+}
+
+.menuDropdown {
   position: absolute;
-  top: var(--space-md);
-  right: var(--space-md);
-  font-size: 0.95rem;
-  font-weight: 600;
+  top: calc(100% - 4px);
+  right: 0;
+  background: #ffffff;
+  border: 1px solid var(--chrome-border);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  display: flex;
+  flex-direction: column;
+  min-width: 110px;
+  padding: 4px;
+  z-index: 10;
+}
+
+.menuItem {
+  font-family: var(--font-bengali);
+  font-size: 0.85rem;
+  color: var(--chrome-text);
+  text-align: left;
+  background: none;
+  border: none;
+  border-radius: 4px;
+  padding: 6px 10px;
+  cursor: pointer;
+}
+
+.menuItem:hover {
+  background: var(--chrome-accent-bg);
   color: var(--chrome-accent);
-  white-space: nowrap;
+}
+
+.menuItemDanger {
+  font-family: var(--font-bengali);
+  font-size: 0.85rem;
+  color: #b3261e;
+  text-align: left;
+  background: none;
+  border: none;
+  border-radius: 4px;
+  padding: 6px 10px;
+  cursor: pointer;
+}
+
+.menuItemDanger:hover {
+  background: #fbe9e7;
 }
 
 .emptyState {
@@ -136,10 +250,19 @@
 }
 
 @media (max-width: 480px) {
-  .rowMain {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 2px;
-    padding-right: 80px;
+  .rowClickArea {
+    padding: var(--space-sm) var(--space-md);
+  }
+
+  .menuWrapper {
+    padding: var(--space-sm) var(--space-sm) 0 0;
+  }
+
+  .rowName {
+    font-size: 0.92rem;
+  }
+
+  .rowAmount {
+    font-size: 0.92rem;
   }
 }
