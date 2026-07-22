@@ -56,15 +56,25 @@ router.post("/generate-pdf", async (req, res) => {
 
   try {
     const pdfBytes = await renderPagesToPdf(htmlDocuments);
-    const safeFilename = (filename || "document").replace(
-      /[^a-zA-Z0-9\u0980-\u09FF_.-]/g,
-      "_",
-    );
+
+    // HTTP headers only accept ASCII/Latin-1 bytes — a Bangla filename
+    // (this app's Set names are typically Bangla, e.g. "নতুন সেশন —
+    // ২১/৭/২০২৬") sent directly in `Content-Disposition` throws
+    // ERR_INVALID_CHAR in Node's http module, which is exactly what
+    // happened here before this fix (every request rendered successfully
+    // but failed at the very last step, setting this header). The fix is
+    // RFC 5987/6266's `filename*=UTF-8''<percent-encoded>` form alongside
+    // a plain ASCII `filename=` fallback: browsers that understand
+    // `filename*` (effectively all modern ones) use the real Bangla name;
+    // anything older falls back to the safe ASCII name instead of
+    // crashing the request.
+    const asciiFallback = "document";
+    const encodedName = encodeURIComponent(filename || asciiFallback);
 
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader(
       "Content-Disposition",
-      `attachment; filename="${safeFilename}.pdf"`,
+      `attachment; filename="${asciiFallback}.pdf"; filename*=UTF-8''${encodedName}.pdf`,
     );
     res.send(Buffer.from(pdfBytes));
   } catch (err) {
