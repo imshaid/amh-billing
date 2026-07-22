@@ -134,11 +134,16 @@ export default function CanvasArea({
           ?.scrollIntoView({ behavior: "smooth", block: "start" });
       },
       // Used by ZoomControl's fit-width/fit-height buttons (see
-      // WorkspaceView) to compute what zoom level makes the fixed-A4-size
-      // page match the space actually available — clientWidth/Height
-      // already excludes the scrollbar, and .canvas's own padding (see
-      // CanvasArea.module.css) is subtracted here so "fit" doesn't leave
-      // the page pressed flush against the viewport edge.
+      // AppRouter/GlobalTopBar) to compute what zoom level makes the
+      // fixed-A4-size page match the space actually available.
+      // clientWidth/Height already excludes any scrollbar, and .canvas's
+      // own padding (see CanvasArea.module.css) is subtracted here so "fit"
+      // doesn't leave the page pressed flush against the viewport edge.
+      // This measurement only means what it says now that .pageWrapper no
+      // longer has `max-width: 100%` (see CanvasArea.module.css) — that
+      // rule used to silently re-clamp the zoomed page back down to this
+      // exact width/height, which is what made the computed fit percentage
+      // disagree with what actually rendered.
       getViewportSize: () => {
         const el = canvasRef.current;
         if (!el) return { width: 0, height: 0 };

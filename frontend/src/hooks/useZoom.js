@@ -12,6 +12,15 @@ const STEP = 0.1;
 const A4_WIDTH_PX = 793.7;
 const A4_HEIGHT_PX = 1122.5;
 
+// The floating "+" (LineItemActions, see BillPage.module.css's
+// .floatingAddButton) sits at `left: -22px` relative to the page's own left
+// edge — outside the page's `210mm` box on purpose, so the printed table
+// never gains an extra column for it (see that file's doc comment). It's
+// still part of what the user needs to see/reach without horizontal
+// scrolling, so fit-width treats the page's *reachable* width as this much
+// wider than the raw A4 width when computing a zoom level.
+const FLOATING_BUTTON_OFFSET_PX = 22;
+
 /**
  * Zoom level for the canvas — pages are fixed at real A4 size (210mm, see
  * BillPage.module.css) since that exact markup is what the PDF service
@@ -51,7 +60,7 @@ export function useZoom(initial = 1) {
 
   const zoomToFitWidth = useCallback((availableWidthPx) => {
     if (!availableWidthPx) return;
-    const next = availableWidthPx / A4_WIDTH_PX;
+    const next = availableWidthPx / (A4_WIDTH_PX + FLOATING_BUTTON_OFFSET_PX);
     setZoom(
       Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, Math.round(next * 100) / 100)),
     );

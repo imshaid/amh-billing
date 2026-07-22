@@ -1,10 +1,22 @@
 .canvas {
   overflow-y: auto;
+  overflow-x: auto;
   min-height: 0;
   padding: var(--space-xl) var(--space-lg);
   display: flex;
   flex-direction: column;
-  align-items: center;
+  /* `center` only holds while the zoomed page fits within the viewport
+     width; once fit-width/zoom-in pushes it wider than that, plain `center`
+     would make the page overflow equally on both sides, so half of it is
+     only reachable by scrolling left — which reads as "cut off" on a phone
+     that never scrolls left by habit. `safe center` (supported in
+     Chromium/WebKit — see useZoom's doc comment on the `zoom` CSS property
+     already assuming this browser family) falls back to start-alignment
+     exactly when the content overflows, so a maximized page's left edge
+     stays anchored at the viewport edge and only the right side needs a
+     scroll — while narrower/zoomed-out pages still get the intended
+     centered look. */
+  align-items: safe center;
   gap: var(--space-xl);
 }
 
@@ -55,7 +67,22 @@
   box-shadow:
     0 1px 4px rgba(0, 0, 0, 0.08),
     0 1px 2px rgba(0, 0, 0, 0.06);
-  max-width: 100%;
+  /* No `max-width: 100%` here anymore — it used to silently clamp the
+     zoomed page back down to .canvas's own width whenever `zoom` scaled it
+     past 100% (e.g. fit-height on a portrait phone, which needs well over
+     100% to make a 297mm-tall page's height match the viewport). That
+     clamp is exactly why fit-width/fit-height's computed percentage used
+     to disagree with what actually rendered — the browser is capping the
+     box at a size the zoom level never actually produces. Removing it lets
+     the page take its true zoomed size, and `.canvas`'s own
+     `overflow-x: auto` (see above) is what handles the case where that's
+     now wider than the viewport, via horizontal scroll, instead of a
+     silent shrink. `flex-shrink: 0` guards the same thing from the other
+     direction — without it, a flex column can still shrink this child
+     below its zoomed size once total content height exceeds .canvas,
+     which is exactly when PageActionBar buttons below each page would
+     otherwise squeeze the page itself. */
+  flex-shrink: 0;
   /* `zoom` (not `transform: scale`) is used for the zoom level — see
      WorkspaceView's ZoomControl/useZoom — specifically because `zoom`
      affects layout (the element's box actually shrinks, so surrounding
