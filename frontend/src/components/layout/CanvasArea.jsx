@@ -497,14 +497,15 @@ export default function CanvasArea({
               ? !hasBillPage
               : false;
         return (
-          <div
-            key={page.id}
-            ref={(el) => {
-              if (el) pageRefs.current.set(page.id, el);
-              else pageRefs.current.delete(page.id);
-            }}
-          >
-            <div className={styles.pageWrapper} style={{ zoom }}>
+          <div key={page.id}>
+            <div
+              className={styles.pageWrapper}
+              style={{ zoom }}
+              ref={(el) => {
+                if (el) pageRefs.current.set(page.id, el);
+                else pageRefs.current.delete(page.id);
+              }}
+            >
               {page.type === "bill" ? (
                 <BillPage
                   page={page}

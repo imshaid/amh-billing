@@ -95,6 +95,25 @@ async function renderChunk(htmlDocuments) {
       const page = await context.newPage();
       try {
         await page.goto(`file://${tempFile}`, { waitUntil: "networkidle" });
+        await page.evaluate(() => document.fonts.ready);
+        // Explicit wait for every <img> to finish loading (or fail) —
+        // `networkidle` only guarantees no in-flight request for 500ms; a
+        // slightly slower fetch to this app's own domain can still be
+        // mid-flight right at that boundary and get missed, leaving
+        // images broken even with an absolute src.
+        await page.evaluate(async () => {
+          const imgs = Array.from(document.images);
+          await Promise.all(
+            imgs.map((img) =>
+              img.complete
+                ? Promise.resolve()
+                : new Promise((resolve) => {
+                    img.addEventListener("load", resolve, { once: true });
+                    img.addEventListener("error", resolve, { once: true });
+                  }),
+            ),
+          );
+        });
         const pdfBytes = await page.pdf({
           format: "A4",
           printBackground: true,

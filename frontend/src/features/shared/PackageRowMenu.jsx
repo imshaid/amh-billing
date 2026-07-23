@@ -48,6 +48,15 @@ export default function PackageRowMenu({ packageName, onEdit, onDelete }) {
         ref={triggerRef}
         className={styles.trigger}
         onClick={openMenu}
+        // Marks this as an inline-edit *affordance* to neutralize (not
+        // remove — the package name text itself must stay) in PDF
+        // exports. See serializePageToHtml.js, which injects a CSS rule
+        // stripping the dotted underline/pointer cursor this button
+        // normally has (see PackageRowMenu.module.css's .trigger) for any
+        // element carrying this attribute. A printed document has no
+        // clickable menu, so the underline that signals "click me" here
+        // is misleading clutter on paper, not a real affordance.
+        data-pdf-plain="true"
       >
         {packageName}
       </button>

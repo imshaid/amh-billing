@@ -241,7 +241,11 @@ export default function DateField({ value, onChange }) {
         className={`${styles.trigger} ${isOpen ? styles.triggerOpen : ""}`}
         onClick={openPicker}
       >
-        {display ?? <span className={styles.placeholder}>দিন/মাস/বছর</span>}
+        {display ?? (
+          <span className={styles.placeholder} data-pdf-hide="true">
+            দিন/মাস/বছর
+          </span>
+        )}
       </button>
 
       {isOpen &&
