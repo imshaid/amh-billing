@@ -180,7 +180,7 @@
      source and scale down" principle as using a high-res image instead of
      a small one, just applied to an inline vector shape instead of a
      bitmap. */
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 80 30' width='80' height='30'%3E%3Ccircle cx='15' cy='15' r='15' fill='%23285aa0'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='2'%3E%3Ccircle cx='1' cy='1' r='1' fill='%23285aa0'/%3E%3C/svg%3E");
   /* fill='%23285aa0' is a hardcoded copy of --brand-blue (see tokens.css)
      — an SVG data-URI is static markup, evaluated before CSS custom
      properties are available to it, so it can't reference `var()`
@@ -200,7 +200,7 @@
      small at their actual displayed size. Bumping the box taller (and the
      spacing out slightly to match) is what makes the same crisp dot
      actually legible as a dot at a normal, unzoomed reading size. */
-  background-size: 8px 3px;
+  background-size: 8px 2px;
   white-space: nowrap;
   overflow: hidden;
 }
