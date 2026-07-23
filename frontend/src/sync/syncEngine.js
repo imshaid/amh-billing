@@ -147,6 +147,19 @@ export async function pullPagesBySet(setId) {
 }
 
 /**
+ * Fetches every Page across every Set — used by the startup bootstrap
+ * (see sync/bootstrap.js) per this project's own decision to fully sync
+ * all history on every app load, not just the Set currently being viewed.
+ *
+ * @returns {Promise<import('../domain/models/Page.js').Page[]>}
+ */
+export async function pullAllPages() {
+  const { data, error } = await supabase.from("pages").select("*");
+  if (error) throw error;
+  return (data ?? []).map(rowToPage);
+}
+
+/**
  * Fetches a single Page from Supabase — used by the 60-day-purge re-fetch
  * path (see purge.js) when the user opens a Set whose Page was purged
  * from IndexedDB locally but still exists in Supabase.

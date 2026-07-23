@@ -7,12 +7,15 @@ import { pullSetById, pullPagesBySet, pickNewer } from "./syncEngine.js";
  * merges it into IndexedDB using Last-Write-Wins by `updatedAt` — see
  * syncEngine.js's own doc comment for why LWW and not a full CRDT merge.
  *
- * Called once per Set open (see hooks/usePages.js / useSets.js wiring),
- * not on a timer — this app's sync model is "push on write (debounced) +
- * pull on load" (see this project's own decision), which is what actually
- * surfaces another device's changes: without this, opening a Set on
- * Device B would just show Device B's last-known IndexedDB copy, even if
- * Device A pushed a newer edit five minutes ago.
+ * Called once per Set open (see hooks/usePages.js wiring). NOTE: since
+ * this project's decision to fully sync all history at startup (see
+ * sync/bootstrap.js), this is no longer the *only* path a Set's Pages get
+ * pulled through — bootstrapSync() already pulls every Page across every
+ * Set once per app load. This function still runs on top of that as a
+ * narrower, faster top-up scoped to exactly the Set being opened: it
+ * catches any edit made on another device *after* this device's last
+ * bootstrap pull but before this exact Set was opened, without needing to
+ * re-pull the entire app's history again just to check one Set.
  *
  * Silently no-ops (never throws) on network failure — a pull failing just
  * means "keep showing whatever's already in IndexedDB", which is exactly
