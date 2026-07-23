@@ -91,6 +91,12 @@
   margin: 0;
 }
 
+.readyText {
+  font-size: 0.82rem;
+  color: var(--chrome-accent);
+  margin: 0;
+}
+
 .buttonRow {
   display: flex;
   justify-content: flex-end;

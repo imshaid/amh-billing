@@ -14,25 +14,31 @@ function toBanglaDigits(n) {
 
 /**
  * Modal opened from GlobalTopBar's "PDF ডাউনলোড" button — lets the user
- * pick which of the current Set's pages to include (or "সবকিছু সিলেক্ট")
- * before generating one combined multi-page PDF via the Cloud Run backend
+ * pick which of the current Set's pages to include (or "সবকিছু সিলেক্ট"),
+ * then generates one combined multi-page PDF via the Cloud Run backend
  * (see usePdfDownload.js). Per an explicit design decision, this is always
  * a single merged PDF regardless of how many/which pages are selected —
  * never a zip of separate files — matching how the backend's own
  * /api/generate-pdf endpoint always returns one PDF for a whole batch (see
  * that route's own doc comment).
  *
- * Also offers a "শেয়ার করুন" button alongside "ডাউনলোড করুন" — see
- * usePdfDownload.js's own `sharePdf` doc comment for how that hands the
- * generated PDF to the OS's native share sheet (WhatsApp/Telegram/email/
- * etc, whatever the user has installed) via the Web Share API. Only shown
- * where the platform actually supports it (`canShareFiles` below) — in
- * practice, mobile browsers only; see that same doc comment for why
- * there's no way to offer a same-looking button that "just works" on
- * desktop too. Both buttons generate against the backend only once each
- * per pageIds selection (cached in usePdfDownload's own state), so
- * clicking one and then the other doesn't hit the backend twice for an
- * identical export.
+ * Two-step flow, not one button that does everything: "PDF তৈরি করুন" first
+ * (talks to the backend, caches the result), then — once that's ready —
+ * separate "ডাউনলোড করুন"/"শেয়ার করুন" buttons that act on the already-
+ * generated file with no further backend call. This split exists because
+ * of a hard Web Share API requirement, not a UX preference: `navigator
+ * .share()` must be called synchronously within a user gesture, so it
+ * can't be the same click that also waits on an async PDF generation
+ * request — see usePdfDownload.js's own top-level doc comment for the
+ * full explanation, including what broke when an earlier version tried to
+ * do both in one click.
+ *
+ * "শেয়ার করুন" hands the generated PDF to the OS's native share sheet
+ * (WhatsApp/Telegram/email/etc, whatever the user has installed) via the
+ * Web Share API — see usePdfDownload.js's own `sharePdf` doc comment. Only
+ * shown where the platform actually supports it (`canShareFiles` below) —
+ * in practice, mobile browsers only; there's no way to offer a same-
+ * looking button that "just works" on desktop too.
  *
  * Pages are listed in the same order CanvasArea itself renders them (see
  * `pages` prop — already sorted by sortPagesForDisplay upstream), grouped
@@ -54,7 +60,7 @@ export default function PdfDownloadModal({
   onClose,
 }) {
   const [selectedIds, setSelectedIds] = useState(() => new Set());
-  const { status, errorMessage, downloadPdf, sharePdf } =
+  const { status, errorMessage, pdfFile, generatePdf, downloadPdf, sharePdf } =
     usePdfDownload(getPageElement);
 
   // "শেয়ার করুন" only makes sense to offer where the OS actually exposes a
@@ -109,22 +115,29 @@ export default function PdfDownloadModal({
     // summary, then bill, then invoices) whenever the user's click order
     // didn't happen to match. Filtering the already-correctly-ordered
     // `pages` array by membership in `selectedIds` (an O(1) lookup) keeps
-    // the order intent-independent of how selection happened. Shared by
-    // both handleDownload and handleShare so the two actions can never
-    // disagree on ordering.
+    // the order intent-independent of how selection happened.
     return pages.filter((p) => selectedIds.has(p.id)).map((p) => p.id);
   }
 
-  async function handleDownload() {
+  async function handleGenerate() {
     const filename = (activeSetName || "document").replace(/\s+/g, "_");
-    const succeeded = await downloadPdf(getOrderedSelectedIds(), filename);
-    if (succeeded) onClose();
+    await generatePdf(getOrderedSelectedIds(), filename);
   }
 
-  async function handleShare() {
-    const filename = (activeSetName || "document").replace(/\s+/g, "_");
-    const succeeded = await sharePdf(getOrderedSelectedIds(), filename);
-    if (succeeded) onClose();
+  // Both of these run with no `await` before their own action — see
+  // usePdfDownload.js's own doc comment on why `sharePdf` in particular
+  // needs that (a hard Web Share API requirement, not a style choice).
+  // `downloadPdf`/`sharePdf` themselves are synchronous now; `pdfFile` is
+  // guaranteed to already exist by the time these buttons are even
+  // rendered (see the `pdfFile ? (...) : (...)` branch below), so there's
+  // nothing left to wait on here.
+  function handleDownload() {
+    downloadPdf();
+    onClose();
+  }
+
+  function handleShare() {
+    sharePdf();
   }
 
   return (
@@ -166,6 +179,12 @@ export default function PdfDownloadModal({
 
         {errorMessage && <p className={styles.errorText}>{errorMessage}</p>}
 
+        {pdfFile && (
+          <p className={styles.readyText}>
+            PDF তৈরি হয়ে গেছে — এখন নিচের অপশন থেকে বেছে নিন।
+          </p>
+        )}
+
         <div className={styles.buttonRow}>
           <button
             type="button"
@@ -175,26 +194,43 @@ export default function PdfDownloadModal({
           >
             বাতিল
           </button>
-          {canShareFiles && (
+
+          {pdfFile ? (
+            // Step 2 — PDF already generated and cached (see usePdfDownload
+            // .js's `pdfFile`); both remaining actions are synchronous,
+            // acting on that same file, no further backend calls.
+            <>
+              {canShareFiles && (
+                <button
+                  type="button"
+                  className={styles.shareButton}
+                  onClick={handleShare}
+                >
+                  শেয়ার করুন
+                </button>
+              )}
+              <button
+                type="button"
+                className={styles.confirmButton}
+                onClick={handleDownload}
+              >
+                ডাউনলোড করুন
+              </button>
+            </>
+          ) : (
+            // Step 1 — nothing generated yet; this is the only button that
+            // actually talks to the backend.
             <button
               type="button"
-              className={styles.shareButton}
-              onClick={handleShare}
+              className={styles.confirmButton}
+              onClick={handleGenerate}
               disabled={selectedIds.size === 0 || status === "generating"}
             >
-              {status === "generating" ? "তৈরি হচ্ছে…" : "শেয়ার করুন"}
+              {status === "generating"
+                ? "তৈরি হচ্ছে…"
+                : `PDF তৈরি করুন (${toBanglaDigits(selectedIds.size)})`}
             </button>
           )}
-          <button
-            type="button"
-            className={styles.confirmButton}
-            onClick={handleDownload}
-            disabled={selectedIds.size === 0 || status === "generating"}
-          >
-            {status === "generating"
-              ? "তৈরি হচ্ছে…"
-              : `ডাউনলোড করুন (${toBanglaDigits(selectedIds.size)})`}
-          </button>
         </div>
       </div>
     </div>
