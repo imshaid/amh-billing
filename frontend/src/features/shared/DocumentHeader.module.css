@@ -75,8 +75,31 @@
   white-space: nowrap;
   display: inline-block;
   transform: scaleX(1.4) scaleY(1.1);
-  -webkit-text-stroke: 2.6px var(--brand-blue-outline);
-  paint-order: stroke fill;
+  /* Was previously `-webkit-text-stroke` + `paint-order: stroke fill` —
+     replaced with a ring of `text-shadow` offsets producing the same
+     visual "outline behind the letters" effect. `-webkit-text-stroke` is
+     a non-standard, WebKit-specific property, and Chromium's headless PDF
+     export path rasterizes it slightly differently than its own on-screen
+     rendering does — the difference was small enough to be invisible on
+     screen but showed up as a faint stray outline fragment beneath
+     certain descender-heavy Bengali letters (e.g. আ, র, ল) specifically in
+     the exported PDF, never in the live workspace preview. `text-shadow`
+     is a standard CSS property with one consistent rendering path — no
+     stroke/fill compositing step of its own to diverge between screen and
+     print — so stacking several zero-blur shadows at small offsets in
+     every direction produces an equivalent-looking outline without that
+     inconsistency. The offset distance (1.3px, roughly half of the old
+     stroke's 2.6px) is chosen so the combined shadows fill in solidly
+     rather than leaving visible gaps between offset copies. */
+  text-shadow:
+    1.3px 0 0 var(--brand-blue-outline),
+    -1.3px 0 0 var(--brand-blue-outline),
+    0 1.3px 0 var(--brand-blue-outline),
+    0 -1.3px 0 var(--brand-blue-outline),
+    1.3px 1.3px 0 var(--brand-blue-outline),
+    1.3px -1.3px 0 var(--brand-blue-outline),
+    -1.3px 1.3px 0 var(--brand-blue-outline),
+    -1.3px -1.3px 0 var(--brand-blue-outline);
 }
 
 .proprietorWrap {
@@ -176,12 +199,12 @@
    between the live workspace and the PDF export. */
 .dotLeader {
   position: absolute;
-  left: 0;
+  left: 4px;
   right: 0;
   bottom: 1px;
-  height: 14px;
+  height: 12px;
   line-height: 1;
-  font-size: 17px;
+  font-size: 12px;
   letter-spacing: 3px;
   color: var(--brand-blue);
   overflow: hidden;
