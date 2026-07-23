@@ -76,33 +76,30 @@
   display: inline-block;
   transform: scaleX(1.4) scaleY(1.1);
   /* Was previously `-webkit-text-stroke` + `paint-order: stroke fill` —
-     replaced with `text-shadow` for the same visual "outline behind the
-     letters" effect, since `-webkit-text-stroke` rasterized slightly
-     differently between Chromium's on-screen rendering and its headless
-     PDF export path (invisible on screen, but a faint stray outline
-     fragment beneath descender-heavy Bengali letters like আ/র/ল in the
-     exported PDF — see the design conversation this came from).
-
-     A first attempt at the text-shadow version used 8 zero-blur copies at
-     1.3px offsets, expecting them to merge into one solid line — instead
-     each sharp copy stayed visually distinct, reading as several thin
-     nested outlines/"echo" rather than one clean stroke (exactly the
-     "noisy, looks like multiple strokes" feedback this revision fixes).
-     Two changes fix that: a small blur radius (0.6px) on every shadow so
-     each copy's edge softens into its neighbors instead of staying a hard
-     line, and a tighter offset (0.9px, down from 1.3px) so the copies
-     overlap more instead of leaving a visible gap between them for that
-     blur to only partially fill. Together these merge into one smooth
-     ring rather than a stack of discrete offset copies. */
+     replaced with a ring of `text-shadow` offsets producing the same
+     visual "outline behind the letters" effect. `-webkit-text-stroke` is
+     a non-standard, WebKit-specific property, and Chromium's headless PDF
+     export path rasterizes it slightly differently than its own on-screen
+     rendering does — the difference was small enough to be invisible on
+     screen but showed up as a faint stray outline fragment beneath
+     certain descender-heavy Bengali letters (e.g. আ, র, ল) specifically in
+     the exported PDF, never in the live workspace preview. `text-shadow`
+     is a standard CSS property with one consistent rendering path — no
+     stroke/fill compositing step of its own to diverge between screen and
+     print — so stacking several zero-blur shadows at small offsets in
+     every direction produces an equivalent-looking outline without that
+     inconsistency. The offset distance (1.3px, roughly half of the old
+     stroke's 2.6px) is chosen so the combined shadows fill in solidly
+     rather than leaving visible gaps between offset copies. */
   text-shadow:
-    0.9px 0 0.6px var(--brand-blue-outline),
-    -0.9px 0 0.6px var(--brand-blue-outline),
-    0 0.9px 0.6px var(--brand-blue-outline),
-    0 -0.9px 0.6px var(--brand-blue-outline),
-    0.9px 0.9px 0.6px var(--brand-blue-outline),
-    0.9px -0.9px 0.6px var(--brand-blue-outline),
-    -0.9px 0.9px 0.6px var(--brand-blue-outline),
-    -0.9px -0.9px 0.6px var(--brand-blue-outline);
+    1.3px 0 0 var(--brand-blue-outline),
+    -1.3px 0 0 var(--brand-blue-outline),
+    0 1.3px 0 var(--brand-blue-outline),
+    0 -1.3px 0 var(--brand-blue-outline),
+    1.3px 1.3px 0 var(--brand-blue-outline),
+    1.3px -1.3px 0 var(--brand-blue-outline),
+    -1.3px 1.3px 0 var(--brand-blue-outline),
+    -1.3px -1.3px 0 var(--brand-blue-outline);
 }
 
 .proprietorWrap {
