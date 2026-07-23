@@ -78,7 +78,32 @@ function groupByCategory(packages) {
     (category) => ({
       category,
       label: CATEGORY_LABELS[category] ?? category,
-      packages: byCategory.get(category),
+      packages: sortPackages(byCategory.get(category)),
     }),
   );
+}
+
+/**
+ * Sorts a category's packages by `rate` ascending, falling back to a
+ * lexicographic (locale-aware) comparison of `name` when two packages
+ * share the same rate — see this project's own decision on picker
+ * ordering. `null`/`undefined` rate sorts after every priced package
+ * (treated as +Infinity) rather than crashing the comparison or sorting
+ * to the front, since a package with no rate set yet is the exceptional
+ * case, not the common one.
+ *
+ * Returns a new array — never mutates the array passed in, since that
+ * array is a live reference held elsewhere (`byCategory.get(category)`
+ * above, itself built directly from the `packages` state this hook owns).
+ *
+ * @param {import('../domain/models/Package.js').Package[]} packages
+ * @returns {import('../domain/models/Package.js').Package[]}
+ */
+function sortPackages(packages) {
+  return [...packages].sort((a, b) => {
+    const rateA = a.rate ?? Infinity;
+    const rateB = b.rate ?? Infinity;
+    if (rateA !== rateB) return rateA - rateB;
+    return a.name.localeCompare(b.name);
+  });
 }

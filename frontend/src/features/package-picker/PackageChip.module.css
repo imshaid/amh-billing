@@ -1,35 +1,99 @@
+/* Fixed footprint for every card in the grid — see PackageChip.jsx's own
+   doc comment for why: a long package name (this app has several, e.g.
+   "Testy Treat / Well Food / Fulkoli / Bonoful / Al Arabian Vegetable
+   Roll - 1 pc") must not grow the card taller than its neighbors; it
+   clips instead (see .name below), and every card lines up edge-to-edge
+   in the grid regardless of name length. */
 .chip {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  gap: 2px;
+  justify-content: space-between;
+  height: 96px;
   background: var(--chrome-bg);
   border: 1px solid var(--chrome-border);
   border-radius: var(--radius-md);
-  padding: var(--space-sm) var(--space-md);
-  cursor: pointer;
-  font-family: var(--font-ui);
-  text-align: left;
-  min-width: 140px;
+  overflow: hidden;
 }
 
 .chip:hover {
   border-color: var(--chrome-accent);
-  background: var(--chrome-accent-bg);
 }
 
-.chip:disabled {
+.chipDisabled {
   opacity: 0.5;
+}
+
+.chipButton {
+  flex: 1;
+  display: flex;
+  align-items: flex-start;
+  background: none;
+  border: none;
+  padding: var(--space-sm) var(--space-md) 0 var(--space-md);
+  cursor: pointer;
+  font-family: var(--font-ui);
+  text-align: left;
+  width: 100%;
+  min-height: 0;
+}
+
+.chipButton:disabled {
   cursor: not-allowed;
+}
+
+.chip:hover .chipButton:not(:disabled) {
+  background: var(--chrome-accent-bg);
 }
 
 .name {
   font-size: 0.85rem;
   font-weight: 500;
   color: var(--chrome-text);
+  /* Clips to 2 lines rather than reflowing the card taller — see the
+     fixed .chip height above. A 3rd+ line is truncated with an ellipsis;
+     the info button (see .footer/.infoButton) always shows the complete
+     name regardless. */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.footer {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  padding: 0 var(--space-md) var(--space-sm) var(--space-md);
 }
 
 .rate {
-  font-size: 0.75rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--chrome-accent);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.infoButton {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  background: none;
+  border: 1px solid var(--chrome-border);
+  border-radius: 50%;
   color: var(--chrome-text-muted);
+  cursor: pointer;
+}
+
+.infoButton:hover {
+  border-color: var(--chrome-accent);
+  color: var(--chrome-accent);
+  background: var(--chrome-accent-bg);
 }

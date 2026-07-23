@@ -1,0 +1,115 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* One layer above PackagePickerPopup's own overlay (z-index: 50, see
+     PackagePickerPopup.module.css) so this modal renders on top of an
+     already-open picker rather than behind or interleaved with it. */
+  z-index: 60;
+  padding: var(--space-lg);
+}
+
+.modal {
+  background: #ffffff;
+  border-radius: var(--radius-md);
+  padding: var(--space-lg);
+  max-width: 480px;
+  width: 100%;
+  max-height: 75vh;
+  overflow-y: auto;
+  font-family: var(--font-bengali);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.25);
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-md);
+  margin-bottom: var(--space-md);
+}
+
+.heading {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--chrome-text);
+  margin: 0;
+}
+
+.closeIconButton {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  background: none;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--chrome-text-muted);
+  cursor: pointer;
+}
+
+.closeIconButton:hover {
+  background: var(--chrome-accent-bg);
+  color: var(--chrome-accent);
+}
+
+.itemList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.itemRow {
+  padding: var(--space-sm) var(--space-md);
+  background: var(--chrome-bg);
+  border: 1px solid var(--chrome-border);
+  border-radius: var(--radius-sm);
+}
+
+.itemBn {
+  font-family: var(--font-bengali);
+  font-size: 0.92rem;
+  color: var(--chrome-text);
+  margin: 0 0 2px 0;
+  line-height: 1.4;
+}
+
+.itemEn {
+  font-family: var(--font-english);
+  font-size: 0.8rem;
+  color: var(--chrome-text-muted);
+  margin: 0;
+  line-height: 1.35;
+}
+
+.noTranslation {
+  font-family: var(--font-ui);
+  font-style: italic;
+  color: var(--chrome-text-muted);
+}
+
+.closeButton {
+  margin-top: var(--space-md);
+  width: 100%;
+  font-family: var(--font-bengali);
+  font-size: 0.85rem;
+  background: none;
+  border: 1px solid var(--chrome-border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-sm) var(--space-md);
+  cursor: pointer;
+}
+
+.closeButton:hover {
+  border-color: var(--chrome-accent);
+  color: var(--chrome-accent);
+}

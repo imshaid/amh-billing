@@ -4,6 +4,7 @@ import {
   getAllPackages,
 } from "./db/packages.repository.js";
 import { defaultPackages } from "./db/seed/defaultPackages.js";
+import { migratePackageReseed } from "./db/seed/migratePackageReseed.js";
 import { bootstrapSync } from "./sync/bootstrap.js";
 import AppRouter from "./components/layout/AppRouter.jsx";
 
@@ -49,6 +50,16 @@ export default function App() {
 
     async function bootstrap() {
       try {
+        // Runs before seedPackagesIfEmpty (not after) — on a fresh
+        // install this is a harmless no-op (the store is already empty,
+        // nothing to delete, migratePackageReseed's own seedPackagesIfEmpty
+        // call fills it), but on a device with pre-existing duplicate
+        // packages, running the migration first avoids seedPackagesIfEmpty
+        // doing nothing (it only inserts into an empty store) and then
+        // the migration immediately deleting and redoing that same work a
+        // moment later — see migratePackageReseed's own doc comment for
+        // the full duplicate-package bug this fixes.
+        await migratePackageReseed();
         await seedPackagesIfEmpty(defaultPackages);
         await getAllPackages(); // confirms the store is actually readable, not just written to
         if (!cancelled) {

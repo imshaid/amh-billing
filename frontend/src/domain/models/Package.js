@@ -1,7 +1,15 @@
 /**
  * @typedef {Object} PackageItem
  * @property {string} id
- * @property {string} text
+ * @property {string} text     English item description — printed on Bill/
+ *   Invoice/PDF exactly as before. Never changed by textBn's existence.
+ * @property {string} [textBn]  Bangla translation, optional. Shown ONLY in
+ *   PackageItemsModal's popup (see features/package-picker) — per this
+ *   project's own decision, the printed document keeps using `text`
+ *   (English) regardless of whether `textBn` is present. Older
+ *   Packages/LineItems created before this field existed simply lack it;
+ *   treat its absence as "no Bangla translation available yet", not an
+ *   error — see PackageItemsModal's own fallback handling.
  */
 
 /**
@@ -24,17 +32,17 @@
  * @returns {Package}
  */
 export function createPackage(input) {
-  const now = new Date().toISOString()
+  const now = new Date().toISOString();
   return {
     id: input.id ?? crypto.randomUUID(),
-    name: input.name ?? '',
+    name: input.name ?? "",
     category: input.category ?? null,
     items: input.items ?? [],
     rate: input.rate ?? null,
     seasonal: input.seasonal ?? null,
     createdAt: input.createdAt ?? now,
     updatedAt: now,
-  }
+  };
 }
 
 /**
@@ -46,5 +54,5 @@ export function createPackage(input) {
  * @returns {PackageItem[]}
  */
 export function snapshotPackageItems(pkg) {
-  return pkg.items.map((item) => ({ ...item }))
+  return pkg.items.map((item) => ({ ...item }));
 }
