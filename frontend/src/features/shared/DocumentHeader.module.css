@@ -199,12 +199,12 @@
    between the live workspace and the PDF export. */
 .dotLeader {
   position: absolute;
-  left: 4px;
+  left: 0;
   right: 0;
   bottom: 1px;
-  height: 12px;
+  height: 14px;
   line-height: 1;
-  font-size: 12px;
+  font-size: 17px;
   letter-spacing: 3px;
   color: var(--brand-blue);
   overflow: hidden;
