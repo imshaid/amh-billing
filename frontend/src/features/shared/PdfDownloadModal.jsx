@@ -12,6 +12,29 @@ function toBanglaDigits(n) {
     .join("");
 }
 
+// English/ASCII-only, e.g. "26-January-2026" — used as the actual
+// downloaded/shared file's name. Per an explicit design decision, this is
+// the moment-of-export date (today, whenever the user actually clicks "PDF
+// তৈরি করুন"), NOT the Set's own name or its purchaseDate — two documents
+// exported a week apart should get two different filenames even if
+// nothing in the Set itself changed. Deliberately NOT Bengali despite
+// every other user-facing string in this app being Bengali: a Bengali
+// filename round-tripped through some sharing surfaces (e.g. WhatsApp's
+// share-sheet on some platforms) came back as visibly mojibake'd
+// (garbled) text — filenames pass through more non-browser software than
+// almost anything else this app produces (OS file pickers, messaging
+// apps' own attachment renderers, etc), several of which don't reliably
+// treat a filename as UTF-8. The PDF's own CONTENT stays fully Bengali
+// throughout, exactly as before — only this one string, the file's own
+// name, is ASCII to sidestep that specific class of platform bug.
+function formatExportFilename() {
+  const now = new Date();
+  const day = now.getDate();
+  const month = now.toLocaleDateString("en-US", { month: "long" });
+  const year = now.getFullYear();
+  return `${day}-${month}-${year}`;
+}
+
 /**
  * Modal opened from GlobalTopBar's "PDF ডাউনলোড" button — lets the user
  * pick which of the current Set's pages to include (or "সবকিছু সিলেক্ট"),
@@ -120,7 +143,7 @@ export default function PdfDownloadModal({
   }
 
   async function handleGenerate() {
-    const filename = (activeSetName || "document").replace(/\s+/g, "_");
+    const filename = formatExportFilename();
     await generatePdf(getOrderedSelectedIds(), filename);
   }
 

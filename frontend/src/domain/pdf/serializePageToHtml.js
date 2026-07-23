@@ -65,6 +65,17 @@
  *    those attributes are set. This function only needs to inject the two
  *    corresponding CSS rules; it has no per-component knowledge itself.
  *
+ * 6. ZOOM — CanvasArea sets a `zoom` inline style directly on this same
+ *    element for on-screen viewing (see CanvasArea.jsx), which reflects
+ *    whatever zoom level the user's workspace happens to be at (e.g. a
+ *    narrow phone screen defaulting to 50% — see useZoom.js). That inline
+ *    style survives `cloneNode(true)` like any other attribute, so
+ *    without explicitly clearing it, an export taken while zoomed out
+ *    would shrink the whole page's content inside the PDF's still-
+ *    full-size A4 canvas — small, corner-anchored content on an otherwise
+ *    blank page. See `buildPrintReadyHtml`'s own comment for where that
+ *    reset happens.
+ *
  * @param {HTMLElement} pageElement - The rendered page's root DOM node
  *   (what CanvasArea's own `pageRefs` map already holds per page id).
  * @returns {string} A complete, self-contained HTML document.
@@ -108,9 +119,22 @@ ${html}
  * values) — everything that needs actual DOM manipulation before
  * serializing, as opposed to points 1/2/5 which only add extra `<head>`
  * content or CSS rules alongside the untouched markup.
+ *
+ * Also strips the `zoom` inline style CanvasArea sets on this exact
+ * element for on-screen viewing (see CanvasArea.jsx's `style={{ zoom }}`)
+ * — the PDF must always render at the page's true 100%/A4 size regardless
+ * of whatever zoom level the user happened to have the workspace set to
+ * (e.g. a phone defaulting to 50% zoom on a narrow screen — see useZoom
+ * .js's own initial-zoom logic). Left in place, that same `zoom: 0.5`
+ * would carry straight through cloneNode(true) into the exported HTML,
+ * shrinking the whole page's content inside the still-A4-sized PDF canvas
+ * (see backend/src/lib/pdfEngine.js's `page.pdf({ format: "A4" })`) —
+ * exactly what produced small, corner-anchored content on a mostly-blank
+ * page when exporting from a zoomed-out mobile view.
  */
 function buildPrintReadyHtml(pageElement) {
   const clone = pageElement.cloneNode(true);
+  clone.style.zoom = "";
 
   for (const img of clone.querySelectorAll("img")) {
     img.setAttribute("src", img.src);
