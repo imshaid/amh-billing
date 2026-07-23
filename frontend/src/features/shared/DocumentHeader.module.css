@@ -154,10 +154,53 @@
   height: 20px;
   display: flex;
   align-items: flex-start;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='2'%3E%3Ccircle cx='1' cy='1' r='1' fill='%23285aa0'/%3E%3C/svg%3E");
+  /* Round, evenly-spaced dots via an inline SVG background — not a CSS
+     `radial-gradient` (small radial-gradient discs are a documented
+     browser rendering weak point under any scale transform — see
+     backend/src/lib/pdfEngine.js's comment history for the original blur
+     this caused) and not a plain `border-bottom: dotted` (browsers don't
+     expose control over that border style's dot spacing/roundness).
+     `background-position` moves the dots up slightly from the bottom edge
+     (matching the reference design) instead of sitting flush against it.
+
+     The SVG itself is drawn at 10x the size it's actually displayed at
+     (viewBox 75x20, circle radius 10 — see `background-size: 7.5px 1.7px`
+     below, which is where the 10x downscale actually happens). A first
+     attempt at this pattern used a viewBox matching the final display
+     size directly (7.5x2, radius 1) — technically correct SVG, but
+     Chromium's headless PDF export path rasterizes a `background-image`
+     at roughly its own natural/intrinsic size *before* repeating and
+     scaling it via `background-size`, so a 7.5x2 SVG with a 1px-radius
+     circle gets baked into a tiny, blurry raster tile from the start,
+     which then tiles blurry no matter what `background-size` says
+     afterward. Drawing the same shape 10x larger and letting
+     `background-size` do the shrinking gives the rasterizer far more
+     source detail to downscale from, which is what actually renders
+     crisply in the exported PDF — this is the same "start from a bigger
+     source and scale down" principle as using a high-res image instead of
+     a small one, just applied to an inline vector shape instead of a
+     bitmap. */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 80 30' width='80' height='30'%3E%3Ccircle cx='15' cy='15' r='15' fill='%23285aa0'/%3E%3C/svg%3E");
+  /* fill='%23285aa0' is a hardcoded copy of --brand-blue (see tokens.css)
+     — an SVG data-URI is static markup, evaluated before CSS custom
+     properties are available to it, so it can't reference `var()`
+     directly. If --brand-blue's value ever changes, this hex code needs
+     updating by hand to match. */
   background-repeat: repeat-x;
   background-position: left bottom 2px;
-  background-size: 8px 2px;
+  /* height 1.7px is what actually made the dots look like a blurry line
+     at normal viewing size — even a perfectly crisp, perfectly round
+     circle rendered into a ~1.7px-tall box is only 1-2 physical pixels
+     across at 100% zoom, too small for the eye to read as a distinct
+     round dot rather than a smear. This was never the SVG-source-size
+     rasterization issue that motivated drawing the SVG at 10x scale (see
+     the doc comment above the background-image itself) — that fix is
+     still correct and still needed; the dots really were crisp once
+     zoomed in (see the design conversation this came out of), just too
+     small at their actual displayed size. Bumping the box taller (and the
+     spacing out slightly to match) is what makes the same crisp dot
+     actually legible as a dot at a normal, unzoomed reading size. */
+  background-size: 8px 3px;
   white-space: nowrap;
   overflow: hidden;
 }
