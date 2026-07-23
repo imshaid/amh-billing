@@ -154,23 +154,30 @@
   height: 20px;
   display: flex;
   align-items: flex-start;
-  /* Was previously a `radial-gradient` background pattern of small dots —
-     replaced with a native dotted border. A gradient-based dot pattern is
-     inherently fragile to rasterize crisply: it's a documented browser
-     behavior (not a bug specific to this app) that small radial-gradient
-     discs blur/fade whenever any scale factor is involved in how the page
-     gets rendered — exactly the situation headless Chromium's PDF export
-     is in, regardless of what `deviceScaleFactor` gets set to on the
-     Playwright side (see backend/src/lib/pdfEngine.js — that was an
-     attempted fix for this same issue that didn't hold up, because the
-     underlying blur is a property of gradient rendering itself, not
-     something a resolution bump reliably corrects). A vector
-     `border-bottom` dotted line has no raster/anti-aliasing step to blur
-     in the first place — it renders identically sharp on screen and in a
-     printed PDF at any scale, which is what actually fixes this for good.
-  */
-  border-bottom: 1.5px dotted var(--brand-blue);
-  padding-bottom: 2px;
+  /* Round, evenly-spaced dots via an inline SVG background — not a CSS
+     `radial-gradient` (see the note below on why that specific approach
+     was ruled out) and not a plain `border-bottom: dotted` (browsers
+     don't expose control over that border style's dot spacing/roundness,
+     so it can't be tuned to match this design's reference spacing).
+     SVG circles are vector shapes with no raster/anti-aliasing step to
+     blur under a scale factor, unlike a CSS radial-gradient disc — which
+     is exactly what caused the earlier blurry/faded dots (small
+     radial-gradient discs are a documented browser rendering weak point
+     under any scale transform; see backend/src/lib/pdfEngine.js's own
+     comment on deviceScaleFactor for the fuller history). This keeps that
+     fix while finally getting real control over dot size and spacing.
+     `background-position` moves the dots up slightly from the bottom
+     edge (matching the reference design) instead of sitting flush against
+     it. */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='2'%3E%3Ccircle cx='1' cy='1' r='1' fill='%23285aa0'/%3E%3C/svg%3E");
+  /* fill='%23285aa0' is a hardcoded copy of --brand-blue (see tokens.css)
+     — an SVG data-URI is static markup, evaluated before CSS custom
+     properties are available to it, so it can't reference `var()`
+     directly. If --brand-blue's value ever changes, this hex code needs
+     updating by hand to match. */
+  background-repeat: repeat-x;
+  background-position: left bottom 3px;
+  background-size: 8px 2px;
   white-space: nowrap;
   overflow: hidden;
 }

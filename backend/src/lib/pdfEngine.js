@@ -83,15 +83,19 @@ function getBrowser() {
  */
 async function renderChunk(htmlDocuments) {
   const browser = await getBrowser();
-  // `deviceScaleFactor: 2` renders at 2x resolution before Chromium's PDF
-  // export flattens it — sharpens text/images generally. (This used to
-  // also be relied on to fix a blurry dotted-underline background
-  // gradient; that gradient has since been replaced entirely with a
-  // vector `border-bottom: dotted` in DocumentHeader.module.css, which
-  // needs no resolution bump to render crisply, since it was gradient
-  // rasterization itself — not resolution — that caused the blur. See
-  // that CSS file's own doc comment for the full explanation.)
-  const context = await browser.newContext({ deviceScaleFactor: 2 });
+  // Left at the default deviceScaleFactor (1) — no longer bumped to 2.
+  // That bump was originally meant to fix a blurry dotted-underline
+  // background gradient; that gradient has since been replaced with a
+  // controllable SVG dot pattern (see DocumentHeader.module.css) that
+  // renders crisply regardless of scale factor, so the bump is no longer
+  // needed for that. Worse, it was an active problem elsewhere:
+  // `deviceScaleFactor: 2` doubles how thick 1px borders/lines render
+  // (this app's table borders — see BillPage.module.css's
+  // `border: 1px solid` — visibly came out heavier in the PDF than in the
+  // on-screen preview because of exactly this factor). Leaving this at
+  // the default keeps the PDF's line weights matching the workspace
+  // preview 1:1 instead of introducing a mismatch of its own.
+  const context = await browser.newContext();
   const mergedPdf = await PDFDocument.create();
 
   try {
