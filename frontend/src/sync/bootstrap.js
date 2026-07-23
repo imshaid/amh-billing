@@ -8,11 +8,15 @@ import {
   pickNewer,
 } from "./syncEngine.js";
 import { purgeStalePages } from "./purge.js";
+import { backfillPushAll } from "./backfill.js";
 
 /**
  * Runs once per app load (see wiring in App.jsx) — pulls every Package,
  * every Set, every Page, and all field_history from Supabase and
- * LWW-merges each into IndexedDB, then runs the 60-day Page purge.
+ * LWW-merges each into IndexedDB, then pushes every local record up to
+ * Supabase (see `backfillPushAll`'s own doc comment for why this is
+ * needed — it's the fix for pre-sync-layer data never reaching the
+ * cloud), then runs the 60-day Page purge.
  *
  * Pages ARE bulk-pulled here (all of them, across every Set) — see this
  * project's own decision: opening the app on any device should
@@ -49,9 +53,23 @@ export async function bootstrapSync() {
     console.warn("[amh-billing] Bootstrap sync pull failed:", err);
   }
 
-  // Independent of whether the pull above succeeded — purging is a purely
-  // local operation (reads IndexedDB's own syncedAt/updatedAt) and doesn't
-  // need fresh remote data to decide what's safe to drop.
+  // Runs after the pull above (not concurrently with it) — the pull
+  // brings in anything newer from Supabase first, so the backfill push
+  // that follows is reading IndexedDB in a state that already reflects
+  // the latest merge, rather than racing it and potentially pushing a
+  // version of a record that the pull was about to overwrite anyway.
+  // Independent try/catch since a failed pull shouldn't prevent this
+  // device's own local-only data from at least attempting to reach the
+  // cloud.
+  try {
+    await backfillPushAll();
+  } catch (err) {
+    console.warn("[amh-billing] Backfill push failed:", err);
+  }
+
+  // Independent of whether the pull/backfill above succeeded — purging is
+  // a purely local operation (reads IndexedDB's own syncedAt/updatedAt)
+  // and doesn't need fresh remote data to decide what's safe to drop.
   try {
     await purgeStalePages();
   } catch (err) {
