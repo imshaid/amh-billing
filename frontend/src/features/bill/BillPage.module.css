@@ -42,26 +42,69 @@
 .table {
   width: 100%;
   table-layout: fixed;
-  border-collapse: collapse;
+  /* `border-collapse: separate` (not `collapse`) + `border-spacing: 0` —
+     required for the box-shadow border-simulation below to work at all.
+     See the comment on `.table th, .table td` for why a real `border`
+     isn't used here anymore; box-shadow doesn't participate in border
+     collapsing the way an actual `border` property does, so collapsed
+     mode would either double up shadows at every shared edge or leave
+     gaps, neither of which is what a normal table border should look
+     like. `border-spacing: 0` closes the gap `separate` mode would
+     otherwise leave between cells, restoring the same flush-adjacent look
+     `collapse` used to give for free. */
+  border-collapse: separate;
+  border-spacing: 0;
   margin-top: 6px;
   font-size: 13.5px;
   position: relative;
   z-index: 1;
+  /* Covers exactly the table's own outer BOTTOM and RIGHT edges — every
+     cell already draws its own top+left edge (see `.table th, .table td`
+     below), which naturally covers the table's outer top and left edges
+     too (the top-left cell's top+left IS the table's outer top-left
+     corner), but nothing else ever draws a table's final bottom row's
+     bottom edge or final column's right edge, since "bottom of the last
+     row" and "right of the last column" aren't anyone's top/left. This
+     box-shadow, offset to the table's own two remaining outer edges,
+     fills in exactly that gap without re-drawing (and thereby doubling)
+     any edge a cell already drew. */
+  box-shadow:
+    inset 0 -0.5px 0 0 var(--brand-blue),
+    inset -0.5px 0 0 0 var(--brand-blue);
 }
 
 .table th,
 .table td {
-  /* 0.75px (not the more obvious 1px) — Chromium's headless PDF export
-     path doesn't map CSS px to print-output px 1:1 for thin borders; a
-     plain `1px solid` border consistently rendered visibly heavier in the
-     exported PDF than the same CSS looks on screen (a print/subpixel
-     rounding quirk, not something specific to this app's stylesheet).
-     0.75px is thin enough that this same rounding lands closer to a true
-     hairline in the PDF while still rendering as a solid, visible 1px
-     line in every normal browser view (Chromium/Firefox/Safari all
-     support sub-integer border widths — none of them silently drop back
-     to 0). */
-  border: 0.75px solid var(--brand-blue);
+  /* Table borders as `box-shadow: inset` instead of the `border` property
+     — Chromium's headless PDF export path has a confirmed limitation
+     (see e.g. Chromium issue 40149824, "Cannot print with border-width of
+     less than 1pt") where border-width silently clamps back up to a full
+     1 "unzoomed" CSS pixel no matter how thin it's set — 0.75px, 0.5px,
+     anything under 1px gets forced back to 1px specifically for the
+     `border` property. That's why an earlier fix here (setting
+     `border: 0.75px solid`) had zero visible effect in the exported PDF
+     even though it looked thinner in every normal browser: Chromium's PDF
+     path was silently overriding it back to 1px regardless. `box-shadow`
+     is a completely different rendering path with no such 1px floor, so
+     a sub-pixel width here (0.5px) actually holds in the PDF instead of
+     being clamped.
+
+     Only the TOP and LEFT edges are drawn per cell (see the two
+     `inset ... 0 0` shadows below — vertical then horizontal offset, both
+     zero blur) — never bottom/right. With `border-collapse: separate` +
+     `border-spacing: 0` (see .table above), two adjacent cells sit flush
+     against each other with no gap; if every cell drew all 4 edges, the
+     shared edge between any two adjacent cells would get drawn TWICE
+     (once by each cell's own shadow), visually doubling that line's
+     thickness — exactly the "too thick" look this fix exists to remove
+     in the first place. Drawing only top+left per cell means each
+     interior shared edge is drawn by exactly one cell (whichever one owns
+     it as a top or left edge), and the table's own outer bottom/right
+     edges are covered separately by `.table`'s own box-shadow (see
+     above). */
+  box-shadow:
+    inset 0 0.5px 0 0 var(--brand-blue),
+    inset 0.5px 0 0 0 var(--brand-blue);
   padding: 3px 6px;
   vertical-align: center;
 }

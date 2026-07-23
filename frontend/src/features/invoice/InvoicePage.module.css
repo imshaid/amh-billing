@@ -36,20 +36,34 @@
 .table {
   width: 100%;
   table-layout: fixed;
-  border-collapse: collapse;
+  /* See BillPage.module.css's identical `.table` for the full explanation
+     of why `separate` + `border-spacing: 0` + box-shadow (below) replaces
+     `collapse` + `border` here. */
+  border-collapse: separate;
+  border-spacing: 0;
   margin-top: 6px;
   font-size: 13.5px;
   position: relative;
   z-index: 1;
+  /* Covers the table's own outer bottom/right edges — see
+     BillPage.module.css's identical `.table` box-shadow for the full
+     explanation. */
+  box-shadow:
+    inset 0 -0.5px 0 0 var(--brand-blue),
+    inset -0.5px 0 0 0 var(--brand-blue);
 }
 
 .table th,
 .table td {
-  /* Kept in sync with BillPage.module.css's identical fix — see that
-     file's own comment on why 0.75px (not 1px) compensates for
-     Chromium's headless PDF export rendering thin borders visibly
-     heavier than the same CSS looks on screen. */
-  border: 0.75px solid var(--brand-blue);
+  /* Table borders as box-shadow (top+left per cell), not the `border`
+     property — see BillPage.module.css's identical `.table th, .table td`
+     for the full explanation of Chromium's confirmed 1px border-width
+     floor in headless PDF export, which is why a real `border` (even at
+     0.75px) rendered no thinner in the exported PDF than a plain 1px one
+     did. */
+  box-shadow:
+    inset 0 0.5px 0 0 var(--brand-blue),
+    inset 0.5px 0 0 0 var(--brand-blue);
   padding: 3px 6px;
   vertical-align: center;
 }
