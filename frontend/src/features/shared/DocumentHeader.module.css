@@ -176,17 +176,32 @@
    between the live workspace and the PDF export. */
 .dotLeader {
   position: absolute;
-  left: 0;
+  left: 4px;
   right: 0;
   bottom: 1px;
-  height: 15px;
+  height: 12px;
   line-height: 1;
-  font-size: 18px;
+  font-size: 12px;
   letter-spacing: 3px;
   color: var(--brand-blue);
   overflow: hidden;
   white-space: nowrap;
   pointer-events: none;
+  /* Right-aligned, not left-aligned — this is what makes every field's
+     dot leader end at the exact same right edge as every other field,
+     matching what the reference design's monospace-grid look actually
+     depends on. With `left`/`right` both anchoring this element's box
+     (see above) but the underlying 300-dot string being far wider than
+     any field, the *overflow* is what gets clipped by `overflow: hidden`
+     — left-aligned, that clip happens on the right, at whatever point
+     each individual field's own width happens to cut into the repeating
+     dot-and-gap cycle, which almost never lines up with a full dot and is
+     exactly what produced ragged, misaligned right edges across different
+     fields. Right-aligned, the overflow instead gets clipped off the
+     LEFT, leaving the right edge always sitting exactly at a full dot —
+     the one edge that's actually visible/compared between adjacent
+     fields — regardless of each field's own width. */
+  text-align: right;
 }
 
 /* The actual field (EditableField/DateField) sits visually above
