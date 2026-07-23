@@ -31,3 +31,6 @@ Thumbs.db
 
 # Vite/PWA generated files
 dev-dist/
+
+# Deploy script with real secrets (API keys etc) — never commit
+backend/deploy.sh
