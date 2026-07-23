@@ -49,6 +49,16 @@ import styles from "./EditableField.module.css";
  * was the same underlying bug reported as "date picker not working",
  * affecting every autocomplete-enabled field the same way.
  *
+ * `formatDisplay(value)`, when given, only changes what's SHOWN while the
+ * field is not focused (e.g. "40" → "40.00" for rate/amount-style number
+ * fields matching this document's ৳X.XX convention) — the moment the user
+ * focuses/clicks in, the input reverts to the raw editable value
+ * (`localValue`, unformatted), so typing "40.5" never fights against a
+ * forced ".00" being reapplied mid-keystroke. Purely cosmetic and
+ * type="number"-only in practice; omit it for text fields (buyerName,
+ * address, etc), which have no such formatted/raw distinction to begin
+ * with.
+ *
  * @param {{
  *   value: string|number|null,
  *   onChange: (value: string) => void,
@@ -57,6 +67,7 @@ import styles from "./EditableField.module.css";
  *   align?: "left"|"center",
  *   autocompleteField?: string,
  *   className?: string,
+ *   formatDisplay?: (value: string|number) => string,
  * }} props
  */
 export default function EditableField({
@@ -67,6 +78,7 @@ export default function EditableField({
   align = "left",
   autocompleteField,
   className = "",
+  formatDisplay,
 }) {
   const [localValue, setLocalValue] = useState(value ?? "");
   const [isFocused, setIsFocused] = useState(false);
@@ -162,6 +174,15 @@ export default function EditableField({
   const showDropdown =
     autocompleteField && isFocused && filteredSuggestions.length > 0;
 
+  // See this component's own doc comment on `formatDisplay` — only applies
+  // while not focused, and only when there's an actual non-empty value to
+  // format (an empty field should stay empty/show its placeholder, not
+  // become "0.00" out of nowhere).
+  const displayValue =
+    !isFocused && formatDisplay && localValue !== ""
+      ? formatDisplay(localValue)
+      : localValue;
+
   return (
     <span className={styles.wrapper} ref={wrapperRef}>
       <input
@@ -169,7 +190,7 @@ export default function EditableField({
         type={type}
         className={`${styles.field} ${className}`}
         data-align={align}
-        value={localValue}
+        value={displayValue}
         placeholder={placeholder}
         onChange={handleChange}
         onFocus={handleFocus}

@@ -45,7 +45,11 @@
 
 .table th,
 .table td {
-  border: 1px solid var(--brand-blue);
+  /* Kept in sync with BillPage.module.css's identical fix — see that
+     file's own comment on why 0.75px (not 1px) compensates for
+     Chromium's headless PDF export rendering thin borders visibly
+     heavier than the same CSS looks on screen. */
+  border: 0.75px solid var(--brand-blue);
   padding: 3px 6px;
   vertical-align: center;
 }

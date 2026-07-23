@@ -147,6 +147,7 @@ export default function BillPage({
                       value={line.rate}
                       onChange={(v) => onLineChange(line.id, "rate", v)}
                       align="center"
+                      formatDisplay={formatRateForDisplay}
                     />
                   </td>
                   <td className={styles.right}>{formatNumber(line.amount)}</td>
@@ -176,6 +177,25 @@ export default function BillPage({
 function formatNumber(value) {
   if (value == null) return "";
   return value.toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
+
+/**
+ * Formats Rate for display only (see EditableField's own `formatDisplay`
+ * doc comment) — matches Amount/Total's existing two-decimal convention
+ * (see `formatNumber` above) so "40" reads as "40.00", same as this app's
+ * ৳X.XX style everywhere else on the page. Unlike `formatNumber`, this
+ * takes the RAW (possibly string) value straight from EditableField's
+ * local input state, not a number already guaranteed non-null — an
+ * in-progress edit or an empty rate should format to nothing rather than
+ * throwing on `.toLocaleString` or printing "NaN.00".
+ */
+function formatRateForDisplay(rawValue) {
+  const num = Number(rawValue);
+  if (rawValue === "" || Number.isNaN(num)) return String(rawValue ?? "");
+  return num.toLocaleString("en-US", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });

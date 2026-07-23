@@ -51,7 +51,17 @@
 
 .table th,
 .table td {
-  border: 1px solid var(--brand-blue);
+  /* 0.75px (not the more obvious 1px) — Chromium's headless PDF export
+     path doesn't map CSS px to print-output px 1:1 for thin borders; a
+     plain `1px solid` border consistently rendered visibly heavier in the
+     exported PDF than the same CSS looks on screen (a print/subpixel
+     rounding quirk, not something specific to this app's stylesheet).
+     0.75px is thin enough that this same rounding lands closer to a true
+     hairline in the PDF while still rendering as a solid, visible 1px
+     line in every normal browser view (Chromium/Firefox/Safari all
+     support sub-integer border widths — none of them silently drop back
+     to 0). */
+  border: 0.75px solid var(--brand-blue);
   padding: 3px 6px;
   vertical-align: center;
 }
