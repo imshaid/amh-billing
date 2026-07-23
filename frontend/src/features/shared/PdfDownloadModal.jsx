@@ -73,7 +73,21 @@ export default function PdfDownloadModal({
 
   async function handleDownload() {
     const filename = (activeSetName || "document").replace(/\s+/g, "_");
-    const succeeded = await downloadPdf([...selectedIds], filename);
+    // `pages.filter(...)` (not `[...selectedIds]`) is what keeps the PDF's
+    // page order matching the canonical বিল → চালান → সামারি order the
+    // workspace itself always shows (see `pages`'s own upstream
+    // sortPagesForDisplay). A Set's iteration order is *insertion* order —
+    // whichever sequence the user happened to click checkboxes in (or,
+    // for "সবকিছু সিলেক্ট", whatever order `pages` itself arrived in) —
+    // which is what previously produced an out-of-order PDF (e.g.
+    // summary, then bill, then invoices) whenever the user's click order
+    // didn't happen to match. Filtering the already-correctly-ordered
+    // `pages` array by membership in `selectedIds` (an O(1) lookup) keeps
+    // the order intent-independent of how selection happened.
+    const orderedSelectedIds = pages
+      .filter((p) => selectedIds.has(p.id))
+      .map((p) => p.id);
+    const succeeded = await downloadPdf(orderedSelectedIds, filename);
     if (succeeded) onClose();
   }
 

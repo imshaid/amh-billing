@@ -83,7 +83,16 @@ function getBrowser() {
  */
 async function renderChunk(htmlDocuments) {
   const browser = await getBrowser();
-  const context = await browser.newContext();
+  // `deviceScaleFactor: 2` renders at 2x resolution before Chromium's PDF
+  // export flattens it — this app's dotted-underline background trick
+  // (see DocumentHeader.module.css's `radial-gradient` with a 1.05px
+  // circle) is fine-grained sub-pixel detail that Chromium's headless PDF
+  // path can otherwise rasterize visibly blurrier/fainter than the same
+  // CSS renders on an actual screen. Doubling the effective resolution
+  // here is what makes that same gradient come out crisp in the PDF
+  // instead of faded, matching how it already looks in the live workspace
+  // preview.
+  const context = await browser.newContext({ deviceScaleFactor: 2 });
   const mergedPdf = await PDFDocument.create();
 
   try {

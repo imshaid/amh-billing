@@ -3,6 +3,7 @@ import { useAppState } from "../../state/useAppState.js";
 import { useSets } from "../../hooks/useSets.js";
 import { usePages } from "../../hooks/usePages.js";
 import { useZoom } from "../../hooks/useZoom.js";
+import { sortPagesForDisplay } from "../../domain/aggregation/pageSort.js";
 import GlobalTopBar from "./GlobalTopBar.jsx";
 import WorkspaceView from "./WorkspaceView.jsx";
 import LandingPage from "../../features/landing/LandingPage.jsx";
@@ -99,7 +100,14 @@ export default function AppRouter() {
 
       {isPdfModalOpen && (
         <PdfDownloadModal
-          pages={pages ?? []}
+          // sortPagesForDisplay (the same canonical বিল → চালান → সামারি
+          // order CanvasArea itself renders pages in) rather than the raw
+          // `pages` from usePages — that raw order reflects IndexedDB
+          // storage/creation order, not display order, which is exactly
+          // what previously let a summary page end up ahead of its bill
+          // in the generated PDF (see PdfDownloadModal.jsx's own doc
+          // comment on the matching fix on its side).
+          pages={sortPagesForDisplay(pages ?? [])}
           activeSetName={activeSet?.name}
           getPageElement={(pageId) =>
             scrollApiRef.current?.getPageElement(pageId) ?? null
