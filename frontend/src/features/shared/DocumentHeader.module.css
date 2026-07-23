@@ -180,7 +180,7 @@
      source and scale down" principle as using a high-res image instead of
      a small one, just applied to an inline vector shape instead of a
      bitmap. */
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 75 20' width='75' height='20'%3E%3Ccircle cx='10' cy='10' r='10' fill='%23285aa0'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 80 30' width='80' height='30'%3E%3Ccircle cx='15' cy='15' r='15' fill='%23285aa0'/%3E%3C/svg%3E");
   /* fill='%23285aa0' is a hardcoded copy of --brand-blue (see tokens.css)
      — an SVG data-URI is static markup, evaluated before CSS custom
      properties are available to it, so it can't reference `var()`
@@ -188,7 +188,19 @@
      updating by hand to match. */
   background-repeat: repeat-x;
   background-position: left bottom 2px;
-  background-size: 7.5px 1.7px;
+  /* height 1.7px is what actually made the dots look like a blurry line
+     at normal viewing size — even a perfectly crisp, perfectly round
+     circle rendered into a ~1.7px-tall box is only 1-2 physical pixels
+     across at 100% zoom, too small for the eye to read as a distinct
+     round dot rather than a smear. This was never the SVG-source-size
+     rasterization issue that motivated drawing the SVG at 10x scale (see
+     the doc comment above the background-image itself) — that fix is
+     still correct and still needed; the dots really were crisp once
+     zoomed in (see the design conversation this came out of), just too
+     small at their actual displayed size. Bumping the box taller (and the
+     spacing out slightly to match) is what makes the same crisp dot
+     actually legible as a dot at a normal, unzoomed reading size. */
+  background-size: 8px 3px;
   white-space: nowrap;
   overflow: hidden;
 }
