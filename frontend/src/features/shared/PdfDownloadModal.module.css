@@ -129,8 +129,29 @@
   background: var(--chrome-accent-hover);
 }
 
+/* Outlined (not filled solid like .confirmButton) — visually secondary to
+   "ডাউনলোড করুন", which stays the primary action since it's guaranteed to
+   work everywhere this modal renders, unlike share which only shows up on
+   platforms that support it (see PdfDownloadModal.jsx's `canShareFiles`). */
+.shareButton {
+  font-family: var(--font-bengali);
+  font-size: 0.85rem;
+  color: var(--chrome-accent);
+  background: none;
+  border: 1px solid var(--chrome-accent);
+  border-radius: var(--radius-sm);
+  padding: 6px var(--space-md);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.shareButton:hover:not(:disabled) {
+  background: var(--chrome-accent-bg);
+}
+
 .confirmButton:disabled,
-.cancelButton:disabled {
+.cancelButton:disabled,
+.shareButton:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }

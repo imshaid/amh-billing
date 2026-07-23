@@ -22,6 +22,18 @@ function toBanglaDigits(n) {
  * /api/generate-pdf endpoint always returns one PDF for a whole batch (see
  * that route's own doc comment).
  *
+ * Also offers a "শেয়ার করুন" button alongside "ডাউনলোড করুন" — see
+ * usePdfDownload.js's own `sharePdf` doc comment for how that hands the
+ * generated PDF to the OS's native share sheet (WhatsApp/Telegram/email/
+ * etc, whatever the user has installed) via the Web Share API. Only shown
+ * where the platform actually supports it (`canShareFiles` below) — in
+ * practice, mobile browsers only; see that same doc comment for why
+ * there's no way to offer a same-looking button that "just works" on
+ * desktop too. Both buttons generate against the backend only once each
+ * per pageIds selection (cached in usePdfDownload's own state), so
+ * clicking one and then the other doesn't hit the backend twice for an
+ * identical export.
+ *
  * Pages are listed in the same order CanvasArea itself renders them (see
  * `pages` prop — already sorted by sortPagesForDisplay upstream), grouped
  * by type with a "১, ২, ৩..." index per group, mirroring PageCountNav's
@@ -42,7 +54,22 @@ export default function PdfDownloadModal({
   onClose,
 }) {
   const [selectedIds, setSelectedIds] = useState(() => new Set());
-  const { status, errorMessage, downloadPdf } = usePdfDownload(getPageElement);
+  const { status, errorMessage, downloadPdf, sharePdf } =
+    usePdfDownload(getPageElement);
+
+  // "শেয়ার করুন" only makes sense to offer where the OS actually exposes a
+  // file-sharing share sheet to the browser — see usePdfDownload.js's own
+  // doc comment on `sharePdf` for why that's mobile-only in practice. On
+  // desktop this button is simply not shown at all (rather than shown
+  // disabled, or shown and silently falling back to a download indistinct
+  // from the "ডাউনলোড করুন" button right next to it) since a same-looking
+  // button that secretly does something else on some browsers would be
+  // more confusing than just not offering it where it can't do its one
+  // job.
+  const canShareFiles =
+    typeof navigator !== "undefined" &&
+    typeof navigator.share === "function" &&
+    typeof navigator.canShare === "function";
 
   // Grouped the same way PageCountNav numbers pages — per type, in
   // whatever order `pages` already arrives (sortPagesForDisplay upstream).
@@ -71,8 +98,7 @@ export default function PdfDownloadModal({
     setSelectedIds(allSelected ? new Set() : new Set(pages.map((p) => p.id)));
   }
 
-  async function handleDownload() {
-    const filename = (activeSetName || "document").replace(/\s+/g, "_");
+  function getOrderedSelectedIds() {
     // `pages.filter(...)` (not `[...selectedIds]`) is what keeps the PDF's
     // page order matching the canonical বিল → চালান → সামারি order the
     // workspace itself always shows (see `pages`'s own upstream
@@ -83,11 +109,21 @@ export default function PdfDownloadModal({
     // summary, then bill, then invoices) whenever the user's click order
     // didn't happen to match. Filtering the already-correctly-ordered
     // `pages` array by membership in `selectedIds` (an O(1) lookup) keeps
-    // the order intent-independent of how selection happened.
-    const orderedSelectedIds = pages
-      .filter((p) => selectedIds.has(p.id))
-      .map((p) => p.id);
-    const succeeded = await downloadPdf(orderedSelectedIds, filename);
+    // the order intent-independent of how selection happened. Shared by
+    // both handleDownload and handleShare so the two actions can never
+    // disagree on ordering.
+    return pages.filter((p) => selectedIds.has(p.id)).map((p) => p.id);
+  }
+
+  async function handleDownload() {
+    const filename = (activeSetName || "document").replace(/\s+/g, "_");
+    const succeeded = await downloadPdf(getOrderedSelectedIds(), filename);
+    if (succeeded) onClose();
+  }
+
+  async function handleShare() {
+    const filename = (activeSetName || "document").replace(/\s+/g, "_");
+    const succeeded = await sharePdf(getOrderedSelectedIds(), filename);
     if (succeeded) onClose();
   }
 
@@ -139,6 +175,16 @@ export default function PdfDownloadModal({
           >
             বাতিল
           </button>
+          {canShareFiles && (
+            <button
+              type="button"
+              className={styles.shareButton}
+              onClick={handleShare}
+              disabled={selectedIds.size === 0 || status === "generating"}
+            >
+              {status === "generating" ? "তৈরি হচ্ছে…" : "শেয়ার করুন"}
+            </button>
+          )}
           <button
             type="button"
             className={styles.confirmButton}
