@@ -63,26 +63,35 @@ export function schedulePush(key, pushFn) {
 
 /**
  * If `key` has a push still waiting out its debounce window, runs it
- * immediately instead of waiting. Used before a delete — see
- * db/pages.repository.js's deletePage — so a delete can't race ahead of an
- * edit that was still debouncing when the delete happened (deleting the
- * Supabase row, then having the stale debounced edit re-insert it a moment
- * later, would resurrect a row the user just deleted).
+ * immediately instead of waiting. Used by sets.repository.js's
+ * ensureSetPushed to guarantee push ordering between a Set and its Pages
+ * (see that function's own doc comment) — NOT used before a delete; a
+ * delete should discard a pending push outright rather than run it first
+ * (see `cancelPush` below, which is what db/pages.repository.js's
+ * deletePage and db/sets.repository.js's deleteSet actually call).
+ *
+ * Unlike the debounced path in `runPush` (which always swallows errors —
+ * a normal timer firing has no one waiting synchronously for the
+ * result), a flush lets its error propagate to the caller. A caller
+ * explicitly asking "did this push actually happen yet" needs to know if
+ * it failed, not just that a timer fired — ensureSetPushed in particular
+ * depends on this to avoid reporting a Set as pushed when it wasn't.
  *
  * @param {string} key
- * @returns {Promise<void>}
+ * @returns {Promise<boolean>} true if a pending push was found and run
+ *   successfully, false if there was nothing pending for this key.
+ * @throws if a push was pending but the push itself failed.
  */
 export async function flushPush(key) {
   const timer = timers.get(key);
   const pushFn = pendingFns.get(key);
-  if (!timer || !pushFn) return;
+  if (!timer || !pushFn) return false;
 
   clearTimeout(timer);
   timers.delete(key);
   pendingFns.delete(key);
-  await pushFn().catch((err) => {
-    console.warn(`[amh-billing] Supabase flush push failed for ${key}:`, err);
-  });
+  await pushFn();
+  return true;
 }
 
 /**

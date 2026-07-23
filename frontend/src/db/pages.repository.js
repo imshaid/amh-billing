@@ -8,6 +8,7 @@ import {
 } from "../domain/models/Page.js";
 import { schedulePush, cancelPush } from "../sync/pushQueue.js";
 import { pushPage, deletePageRemote } from "../sync/syncEngine.js";
+import { ensureSetPushed } from "../sync/ensureSetPushed.js";
 
 /**
  * Schedules a debounced Supabase push for a page, then — once the push
@@ -21,10 +22,22 @@ import { pushPage, deletePageRemote } from "../sync/syncEngine.js";
  * pushQueue.js's own doc comment on why debouncing is per-record, not
  * global.
  *
+ * Calls `ensureSetPushed` first — fixes a real bug found during testing:
+ * `pages.set_id` has a foreign-key constraint against `sets.id` (see
+ * supabase_schema.sql), but a brand-new Set and its very first Page(s)
+ * each schedule their own independently-debounced push with no ordering
+ * between them, so the Page's push could reach Supabase before the Set's
+ * own push had landed — Postgres then rejects the Page insert outright
+ * ("Key is not present in table sets"). `ensureSetPushed` guarantees the
+ * parent Set exists in Supabase before this function's own push runs;
+ * see that function's own doc comment in sync/ensureSetPushed.js (also
+ * explains why it lives there rather than in sets.repository.js).
+ *
  * @param {import('../domain/models/Page.js').Page} page
  */
 function schedulePagePush(page) {
   schedulePush(`page:${page.id}`, async () => {
+    await ensureSetPushed(page.setId);
     await pushPage(page);
     const db = await getDB();
     const current = await db.get(STORE.PAGES, page.id);
