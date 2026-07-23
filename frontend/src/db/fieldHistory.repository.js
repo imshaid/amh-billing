@@ -1,5 +1,7 @@
 import { getDB } from "./client.js";
 import { STORE } from "./schema.js";
+import { schedulePush } from "../sync/pushQueue.js";
+import { pushFieldHistory } from "../sync/syncEngine.js";
 
 const MAX_HISTORY_PER_FIELD = 20;
 
@@ -44,5 +46,16 @@ export async function recordFieldValue(fieldName, value) {
     ...previousValues.filter((v) => v !== trimmed),
   ].slice(0, MAX_HISTORY_PER_FIELD);
 
-  await db.put(STORE.FIELD_HISTORY, { fieldName, values: nextValues });
+  // `updatedAt` added alongside sync wiring — field_history predates this
+  // field (see this store's original schema.js entry, which only ever
+  // stored { fieldName, values }), but LWW merge on pull (see
+  // sync/syncEngine.js's pickNewer) needs a timestamp to compare like
+  // every other synced table.
+  const entry = {
+    fieldName,
+    values: nextValues,
+    updatedAt: new Date().toISOString(),
+  };
+  await db.put(STORE.FIELD_HISTORY, entry);
+  schedulePush(`field_history:${fieldName}`, () => pushFieldHistory(entry));
 }

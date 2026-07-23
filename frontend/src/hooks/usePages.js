@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { getPagesBySet } from "../db/pages.repository.js";
+import { pullAndMergeSet } from "../sync/pull.js";
 
 /**
  * Loads all Pages for a given Set (already ordered by date ascending — see
@@ -41,8 +42,20 @@ export function usePages(setId) {
       return;
     }
     try {
-      if (!hasLoadedOnceRef.current) {
+      const isFirstLoadForThisSet = !hasLoadedOnceRef.current;
+      if (isFirstLoadForThisSet) {
         setStatus("loading");
+        // Pull-on-load (see sync/pull.js's own doc comment): only on the
+        // *first* load for this setId, not every refresh() call — every
+        // inline edit/add/delete already calls refresh() locally to pick
+        // up its own write (see CanvasArea), and re-pulling from Supabase
+        // on every one of those would be both wasteful (a network round
+        // trip per keystroke-commit) and actively wrong (it could race a
+        // push that hasn't landed yet and momentarily show stale data
+        // pulled mid-edit). A pull genuinely only needs to happen once
+        // per "the user just opened this Set", which is exactly what
+        // `isFirstLoadForThisSet` captures.
+        await pullAndMergeSet(setId);
       }
       const result = await getPagesBySet(setId);
       setPages(result);

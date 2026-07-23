@@ -170,6 +170,38 @@ date changes or a new page is added. No drag-and-drop reordering in MVP (future 
 
 - IndexedDB is the offline-first source of truth on-device.
 - Supabase holds full permanent history.
-- Any record with `synced_at` set and `age > 30 days` is purged from IndexedDB on the
-  next sync cycle. It remains fully available in Supabase and will be re-fetched on
-  demand if the user searches history older than 30 days.
+- Only `Page` rows are ever purged from IndexedDB — any Page with `synced_at`
+  set and `age > 60 days` is removed on the next sync cycle. It remains fully
+  available in Supabase and will be re-fetched on demand if the user searches
+  history older than 60 days.
+- `Package` and `Set` are never purged from IndexedDB, regardless of age —
+  both are small (reference data / session metadata) and are needed for the
+  app to function offline at all (package picker, Previous Sessions list).
+  They're still synced to Supabase like everything else, purely as a backup —
+  the sync layer just never deletes the local copy of either.
+
+## Supabase Sync
+
+Implemented in `frontend/src/sync/` — see that folder's own files for
+mechanism-level detail (this section is the "what and why", not a
+duplicate of the code comments).
+
+- **Push**: debounced per-record (2.5s after the last edit settles — see
+  `sync/pushQueue.js`), triggered from every write in
+  `db/{pages,sets,packages,fieldHistory}.repository.js`. Not real-time —
+  a debounce avoids a network write per keystroke.
+- **Pull**: on load, not on a timer. A Set's Pages are pulled the first
+  time that Set is opened (`sync/pull.js`, wired into `hooks/usePages.js`);
+  Packages/Sets/field_history are pulled once at app startup
+  (`sync/bootstrap.js`), since those stay small regardless of history size.
+- **Conflict resolution**: Last-Write-Wins by `updatedAt` (`pickNewer` in
+  `sync/syncEngine.js`). Chosen over a full CRDT/merge approach because
+  this app is used by a small hotel team from multiple devices, where
+  genuine same-field concurrent edits are rare enough that LWW's
+  simplicity outweighs the (small) risk of one edit losing to another
+  made around the same time.
+- **No manual sync control** — no "sync now" button, no visible sync
+  status. Sync is fully automatic and silent; a failed push/pull is
+  logged to the console but never surfaces as an error to the user, since
+  IndexedDB (not Supabase) is always the source of truth for what's on
+  screen.

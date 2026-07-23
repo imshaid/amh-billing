@@ -4,6 +4,7 @@ import {
   getAllPackages,
 } from "./db/packages.repository.js";
 import { defaultPackages } from "./db/seed/defaultPackages.js";
+import { bootstrapSync } from "./sync/bootstrap.js";
 import AppRouter from "./components/layout/AppRouter.jsx";
 
 /**
@@ -53,6 +54,17 @@ export default function App() {
         if (!cancelled) {
           setStatus("ready");
         }
+        // Deliberately not awaited: this app is offline-first — the
+        // "ready" gate above only needs to confirm IndexedDB itself is
+        // reachable, not that a network round-trip to Supabase has
+        // finished. Blocking first render on bootstrapSync() would mean a
+        // slow/offline connection delays showing the app at all, which
+        // defeats the entire point of an offline-first PWA. bootstrapSync
+        // merges whatever it finds into IndexedDB in the background and
+        // never throws (see its own doc comment) — any component reading
+        // via usePackages/useSets will just pick up the merged data on
+        // its next natural refresh.
+        bootstrapSync();
       } catch (err) {
         console.error("[amh-billing] bootstrap failed:", err);
         if (!cancelled) {

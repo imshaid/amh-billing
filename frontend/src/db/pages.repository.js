@@ -6,6 +6,39 @@ import {
   duplicateAsRevision,
   duplicatePageAsNew,
 } from "../domain/models/Page.js";
+import { schedulePush, cancelPush } from "../sync/pushQueue.js";
+import { pushPage, deletePageRemote } from "../sync/syncEngine.js";
+
+/**
+ * Schedules a debounced Supabase push for a page, then — once the push
+ * actually completes — stamps `syncedAt` onto the IndexedDB row. This is
+ * the one place `syncedAt` gets set; every write path below that changes
+ * `lineItems`/fields calls this afterward rather than setting `syncedAt`
+ * itself, so there's exactly one source of truth for "this exact version
+ * made it to the cloud".
+ *
+ * Uses the page's own `id` as the debounce key (`page:${id}`) — see
+ * pushQueue.js's own doc comment on why debouncing is per-record, not
+ * global.
+ *
+ * @param {import('../domain/models/Page.js').Page} page
+ */
+function schedulePagePush(page) {
+  schedulePush(`page:${page.id}`, async () => {
+    await pushPage(page);
+    const db = await getDB();
+    const current = await db.get(STORE.PAGES, page.id);
+    // Guard against the row having been deleted locally while this push
+    // was still in flight — re-inserting it here would resurrect a
+    // page the user already deleted.
+    if (current) {
+      await db.put(STORE.PAGES, {
+        ...current,
+        syncedAt: new Date().toISOString(),
+      });
+    }
+  });
+}
 
 /** @returns {Promise<import('../domain/models/Page.js').Page|undefined>} */
 export async function getPageById(id) {
@@ -46,6 +79,7 @@ export async function addPage(input) {
   const db = await getDB();
   const page = createPage(input);
   await db.add(STORE.PAGES, page);
+  schedulePagePush(page);
   return page;
 }
 
@@ -68,6 +102,7 @@ export async function addDuplicatedPage(sourcePage, type) {
     type,
   });
   await db.add(STORE.PAGES, page);
+  schedulePagePush(page);
   return page;
 }
 
@@ -83,6 +118,7 @@ export async function addSummaryPage(input) {
   const db = await getDB();
   const page = createSummaryPage(input);
   await db.add(STORE.PAGES, page);
+  schedulePagePush(page);
   return page;
 }
 
@@ -109,6 +145,7 @@ export async function updateDraftPage(id, changes) {
     updatedAt: new Date().toISOString(),
   };
   await db.put(STORE.PAGES, updated);
+  schedulePagePush(updated);
   return updated;
 }
 
@@ -129,24 +166,46 @@ export async function revisePage(originalPageId, changes) {
   }
   const revision = duplicateAsRevision(original, changes);
   await db.add(STORE.PAGES, revision);
+  schedulePagePush(revision);
   return revision;
 }
 
-/** @param {string} id */
+/**
+ * Deletes a page locally and from Supabase. `cancelPush` runs first so a
+ * push that was still debouncing for this exact page can never fire
+ * *after* the delete and silently re-insert the row on the server (see
+ * pushQueue.js's own doc comment on cancelPush).
+ *
+ * The remote delete itself is fire-and-forget — awaited, but its failure
+ * is only logged, not thrown, since the local delete (the part the user
+ * actually sees) already succeeded by the time it runs; see
+ * schedulePush's own reasoning for why sync failures never surface as a
+ * broken UI.
+ *
+ * @param {string} id
+ */
 export async function deletePage(id) {
+  cancelPush(`page:${id}`);
   const db = await getDB();
   await db.delete(STORE.PAGES, id);
+  deletePageRemote(id).catch((err) =>
+    console.warn(`[amh-billing] Supabase delete failed for page:${id}:`, err),
+  );
 }
 
 /**
- * Rows eligible for the 30-day local cache purge: already synced to Supabase
+ * Rows eligible for the 60-day local cache purge: already synced to Supabase
  * and older than the cutoff. Supabase keeps the permanent copy — this only
  * trims what's kept on-device. See "Local Cache Policy" in docs/data-model.md.
+ *
+ * Default matches sync/purge.js's PURGE_MAX_AGE_DAYS — pass an explicit
+ * value here only if you deliberately want a different window than the
+ * one the actual purge routine uses (e.g. for testing).
  *
  * @param {number} maxAgeDays
  * @returns {Promise<import('../domain/models/Page.js').Page[]>}
  */
-export async function getPurgeableSyncedPages(maxAgeDays = 30) {
+export async function getPurgeableSyncedPages(maxAgeDays = 60) {
   const db = await getDB();
   const cutoff = new Date(
     Date.now() - maxAgeDays * 24 * 60 * 60 * 1000,

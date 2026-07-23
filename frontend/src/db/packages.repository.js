@@ -1,6 +1,20 @@
 import { getDB } from "./client.js";
 import { STORE } from "./schema.js";
 import { createPackage } from "../domain/models/Package.js";
+import { schedulePush, cancelPush } from "../sync/pushQueue.js";
+import { pushPackage, deletePackageRemote } from "../sync/syncEngine.js";
+
+/**
+ * Schedules a debounced Supabase push for a Package. Like Set (see
+ * sets.repository.js), Package has no `syncedAt` field — Packages are
+ * never purged from IndexedDB (see this project's own decision), so
+ * there's nothing that needs to read one.
+ *
+ * @param {import('../domain/models/Package.js').Package} pkg
+ */
+function schedulePackagePush(pkg) {
+  schedulePush(`package:${pkg.id}`, () => pushPackage(pkg));
+}
 
 /**
  * All reads/writes to the `packages` store go through this file. Nothing else
@@ -35,6 +49,7 @@ export async function addPackage(input) {
   const db = await getDB();
   const pkg = createPackage(input);
   await db.add(STORE.PACKAGES, pkg);
+  schedulePackagePush(pkg);
   return pkg;
 }
 
@@ -60,13 +75,21 @@ export async function updatePackage(id, changes) {
     updatedAt: new Date().toISOString(),
   };
   await db.put(STORE.PACKAGES, updated);
+  schedulePackagePush(updated);
   return updated;
 }
 
 /** @param {string} id */
 export async function deletePackage(id) {
+  cancelPush(`package:${id}`);
   const db = await getDB();
   await db.delete(STORE.PACKAGES, id);
+  deletePackageRemote(id).catch((err) =>
+    console.warn(
+      `[amh-billing] Supabase delete failed for package:${id}:`,
+      err,
+    ),
+  );
 }
 
 /**
@@ -95,9 +118,12 @@ export async function seedPackagesIfEmpty(inputs) {
   const existing = await tx.store.getAll();
   const existingNames = new Set(existing.map((pkg) => pkg.name));
   const toInsert = inputs.filter((input) => !existingNames.has(input.name));
+  const created = toInsert.map((input) => createPackage(input));
 
-  await Promise.all([
-    ...toInsert.map((input) => tx.store.add(createPackage(input))),
-    tx.done,
-  ]);
+  await Promise.all([...created.map((pkg) => tx.store.add(pkg)), tx.done]);
+
+  // Pushed after the transaction commits (not inside it) — schedulePush's
+  // debounce timers/network calls have no business being part of an
+  // IndexedDB transaction's atomicity.
+  created.forEach(schedulePackagePush);
 }

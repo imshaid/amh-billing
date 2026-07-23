@@ -2,6 +2,22 @@ import { getDB } from "./client.js";
 import { STORE } from "./schema.js";
 import { createSet } from "../domain/models/Set.js";
 import { getPagesBySet, deletePage } from "./pages.repository.js";
+import { schedulePush, cancelPush } from "../sync/pushQueue.js";
+import { pushSet, deleteSetRemote } from "../sync/syncEngine.js";
+
+/**
+ * Schedules a debounced Supabase push for a Set. Unlike pages.repository.js's
+ * schedulePagePush, this never stamps a `syncedAt` back onto the local row —
+ * Set has no `syncedAt` field (see domain/models/Set.js) because Sets are
+ * never purged from IndexedDB (see this project's own decision — Sets stay
+ * local permanently as small session metadata), so there's nothing that
+ * needs to read it.
+ *
+ * @param {import('../domain/models/Set.js').Set} set
+ */
+function scheduleSetPush(set) {
+  schedulePush(`set:${set.id}`, () => pushSet(set));
+}
 
 /** @returns {Promise<import('../domain/models/Set.js').Set|undefined>} */
 export async function getSetById(id) {
@@ -22,6 +38,7 @@ export async function addSet(input) {
   const db = await getDB();
   const set = createSet(input);
   await db.add(STORE.SETS, set);
+  scheduleSetPush(set);
   return set;
 }
 
@@ -42,6 +59,7 @@ export async function updateSet(id, changes) {
     updatedAt: new Date().toISOString(),
   };
   await db.put(STORE.SETS, updated);
+  scheduleSetPush(updated);
   return updated;
 }
 
@@ -71,7 +89,18 @@ export async function resyncSetPageOrder(setId) {
  */
 export async function deleteSet(id) {
   const pages = await getPagesBySet(id);
+  // Each deletePage() call already cancels that page's own pending push
+  // and issues its own Supabase delete (see pages.repository.js) — no
+  // need to duplicate that here. The Supabase `pages.set_id ... on delete
+  // cascade` (see supabase_schema.sql) would clean these up anyway once
+  // the Set row below is deleted, but deleting them explicitly first
+  // keeps the local and remote deletion paths symmetric rather than
+  // relying on a cascade the local IndexedDB side has no equivalent of.
   await Promise.all(pages.map((page) => deletePage(page.id)));
+  cancelPush(`set:${id}`);
   const db = await getDB();
   await db.delete(STORE.SETS, id);
+  deleteSetRemote(id).catch((err) =>
+    console.warn(`[amh-billing] Supabase delete failed for set:${id}:`, err),
+  );
 }
