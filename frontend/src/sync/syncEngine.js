@@ -48,7 +48,23 @@ function pickNewer(local, remote) {
 // packages
 // ---------------------------------------------------------------------
 
-/** @param {import('../domain/models/Package.js').Package} pkg */
+/**
+ * `onConflict: "id"` is deliberate, not left over — since
+ * supabase_add_unique_constraint.sql added a UNIQUE(name, rate)
+ * constraint, a push whose id doesn't match any existing row but whose
+ * (name, rate) DOES match one is a genuine duplicate attempt, and this
+ * upsert's conflict target being "id" (not "name,rate") means Postgres
+ * rejects that insert outright with a real error, rather than silently
+ * upserting over the existing row under a mismatched id. That error
+ * surfaces via this function's own `throw`, which the caller (see
+ * db/packages.repository.js's schedulePackagePush, or
+ * sync/backfill.js's backfillPushAll) logs — giving actual visibility
+ * into "something tried to create a duplicate package" instead of it
+ * happening invisibly, per this project's own decision to prefer a
+ * caught, logged error over a silent merge.
+ *
+ * @param {import('../domain/models/Package.js').Package} pkg
+ */
 export async function pushPackage(pkg) {
   const { error } = await supabase
     .from("packages")

@@ -4,7 +4,7 @@ import {
   getAllPackages,
 } from "./db/packages.repository.js";
 import { defaultPackages } from "./db/seed/defaultPackages.js";
-import { migratePackageReseed } from "./db/seed/migratePackageReseed.js";
+import { dedupePackages } from "./db/seed/dedupePackages.js";
 import { bootstrapSync } from "./sync/bootstrap.js";
 import AppRouter from "./components/layout/AppRouter.jsx";
 
@@ -50,16 +50,6 @@ export default function App() {
 
     async function bootstrap() {
       try {
-        // Runs before seedPackagesIfEmpty (not after) — on a fresh
-        // install this is a harmless no-op (the store is already empty,
-        // nothing to delete, migratePackageReseed's own seedPackagesIfEmpty
-        // call fills it), but on a device with pre-existing duplicate
-        // packages, running the migration first avoids seedPackagesIfEmpty
-        // doing nothing (it only inserts into an empty store) and then
-        // the migration immediately deleting and redoing that same work a
-        // moment later — see migratePackageReseed's own doc comment for
-        // the full duplicate-package bug this fixes.
-        await migratePackageReseed();
         await seedPackagesIfEmpty(defaultPackages);
         await getAllPackages(); // confirms the store is actually readable, not just written to
         if (!cancelled) {
@@ -75,7 +65,19 @@ export default function App() {
         // never throws (see its own doc comment) — any component reading
         // via usePackages/useSets will just pick up the merged data on
         // its next natural refresh.
-        bootstrapSync();
+        //
+        // dedupePackages() is chained to run only *after* bootstrapSync
+        // resolves (not fired in parallel) — bootstrapSync's own pull can
+        // itself bring in duplicate Packages from Supabase (e.g. rows that
+        // predate supabase_add_unique_constraint.sql's UNIQUE(name, rate)
+        // constraint on other devices that haven't deduplicated yet), so
+        // deduping only makes sense once that pull has actually landed;
+        // deduping first would just leave whatever the pull brings in
+        // right after unaddressed until the next app load. Still not
+        // awaited by the bootstrap() function itself — same offline-first
+        // reasoning as above, this entire chain runs in the background
+        // after "ready" is already shown.
+        bootstrapSync().then(dedupePackages);
       } catch (err) {
         console.error("[amh-billing] bootstrap failed:", err);
         if (!cancelled) {
