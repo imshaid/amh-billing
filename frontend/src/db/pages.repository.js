@@ -174,13 +174,19 @@ export async function deletePage(id) {
  * whole app, since a workspace view only ever needs updates for the Set
  * it's currently showing.
  *
+ * Channel name includes a random suffix on top of `setId` — see
+ * sets.repository.js's subscribeToSets for the full reasoning (fixes a
+ * real "cannot add `postgres_changes` callbacks ... after `subscribe()`"
+ * crash: `setId` alone collided whenever two subscriptions for the same
+ * Set existed at once, e.g. React StrictMode's double-invoked effects).
+ *
  * @param {string} setId
  * @param {() => void} onChange
  * @returns {() => void} unsubscribe
  */
 export function subscribeToPagesBySet(setId, onChange) {
   const channel = supabase
-    .channel(`pages-changes-${setId}`)
+    .channel(`pages-changes-${setId}-${crypto.randomUUID()}`)
     .on(
       "postgres_changes",
       {

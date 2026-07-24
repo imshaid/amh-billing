@@ -99,12 +99,21 @@ export async function deleteSet(id) {
  * packages.repository.js's subscribeToPackages for the full reasoning
  * (row-level live sync across devices, not keystroke-level).
  *
+ * Channel name includes a random suffix — fixes a real bug found during
+ * testing: a fixed channel name ("sets-changes") collided whenever two
+ * subscriptions existed at once (e.g. React 18 StrictMode's deliberate
+ * double-invoke of effects in development, or two components each
+ * calling useSets()), producing "cannot add `postgres_changes` callbacks
+ * ... after `subscribe()`" and crashing the whole app with a white
+ * screen. Each call now gets its own channel identity, so concurrent
+ * subscriptions never collide.
+ *
  * @param {() => void} onChange
  * @returns {() => void} unsubscribe
  */
 export function subscribeToSets(onChange) {
   const channel = supabase
-    .channel("sets-changes")
+    .channel(`sets-changes-${crypto.randomUUID()}`)
     .on(
       "postgres_changes",
       { event: "*", schema: "public", table: "sets" },

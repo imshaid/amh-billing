@@ -134,13 +134,19 @@ export async function seedPackagesIfEmpty(inputs) {
  * hooks/usePackages.js) must call it on unmount to avoid leaking the
  * subscription.
  *
+ * Channel name includes a random suffix — see sets.repository.js's
+ * subscribeToSets for the full reasoning (fixes a real "cannot add
+ * `postgres_changes` callbacks ... after `subscribe()`" crash that
+ * happened whenever two subscriptions existed at once, e.g. React
+ * StrictMode's double-invoked effects).
+ *
  * @param {() => void} onChange Called (with no arguments — callers just
  *   re-fetch, see usePackages.js) whenever any row in `packages` changes.
  * @returns {() => void} unsubscribe
  */
 export function subscribeToPackages(onChange) {
   const channel = supabase
-    .channel("packages-changes")
+    .channel(`packages-changes-${crypto.randomUUID()}`)
     .on(
       "postgres_changes",
       { event: "*", schema: "public", table: "packages" },
