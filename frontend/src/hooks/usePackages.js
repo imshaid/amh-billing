@@ -125,13 +125,20 @@ function groupByCategory(packages, categories) {
     (a, b) => a.displayOrder - b.displayOrder,
   );
 
-  const groups = sortedCategories
-    .filter((category) => byCategory.has(category.id))
-    .map((category) => ({
-      categoryId: category.id,
-      label: category.name,
-      packages: sortPackages(byCategory.get(category.id)),
-    }));
+  // Every Category gets a group — including ones with zero Packages yet.
+  // Filtering those out (an earlier version of this function did) was a
+  // real bug: a brand-new Category had no way to ever be reached, since
+  // its tab would never appear until it already had a package in it, but
+  // the "+ নতুন প্যাকেজ" button that adds a package to a category only
+  // exists on that category's own (nonexistent) tab. Showing an empty tab
+  // with a "0" count is the correct behavior — it's a real category the
+  // user just created, not a category to hide until it's "earned" a
+  // package.
+  const groups = sortedCategories.map((category) => ({
+    categoryId: category.id,
+    label: category.name,
+    packages: sortPackages(byCategory.get(category.id) ?? []),
+  }));
 
   // Orphaned packages (categoryId pointing at nothing, or literally null)
   // still need to be visible somewhere rather than silently vanishing —
