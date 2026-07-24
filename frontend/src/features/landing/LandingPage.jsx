@@ -13,15 +13,13 @@ import {
   buildOrderedByPersonBreakdown,
   buildDailyOrderDetail,
 } from "../../domain/aggregation/dashboardCalculator.js";
-import FeatureCard from "./FeatureCard.jsx";
 import NewSessionModal from "./NewSessionModal.jsx";
-import StatsStrip from "./dashboard/StatsStrip.jsx";
+import KpiCard from "./dashboard/KpiCard.jsx";
 import TimeRangeSelector from "./dashboard/TimeRangeSelector.jsx";
 import IncomeTrendChart from "./dashboard/IncomeTrendChart.jsx";
+import DonutChart from "./dashboard/DonutChart.jsx";
 import BreakdownBarChart from "./dashboard/BreakdownBarChart.jsx";
 import DailyOrderDetail from "./dashboard/DailyOrderDetail.jsx";
-import RecentSessions from "./dashboard/RecentSessions.jsx";
-import chartCardStyles from "./dashboard/ChartCard.module.css";
 import styles from "./LandingPage.module.css";
 
 /** Today as "YYYY-MM-DD" in local time (not UTC — see toDateOnly's own
@@ -36,27 +34,33 @@ function todayIso() {
 }
 
 /**
- * Home screen — now a real business dashboard (see this project's own
- * decision), not just a 4-card router. Still serves that original router
- * role too (see the compact "quick actions" row near the bottom), but the
- * bulk of the screen is stats/charts/records built from every Set/Page in
- * the database via useDashboardData.
+ * Home screen — a real, dense business dashboard (see this project's own
+ * decision, researched against actual hotel/admin dashboard UI
+ * conventions rather than guessed at) built to fit entirely within one
+ * viewport on large screens, no scrolling — see LandingPage.module.css's
+ * grid, and AppRouter.jsx's own decision to give this view the same
+ * no-scroll container WorkspaceView uses. On narrow screens the same
+ * grid collapses to a scrollable single column (see the media query in
+ * LandingPage.module.css) — a non-scrollable *requirement* only applies
+ * to desktop-sized viewports; a phone genuinely cannot show this much at
+ * once without scrolling, and forcing it to would just make everything
+ * illegibly small instead.
+ *
+ * "নতুন সেশন"/"আগের সেশনসমূহ"/"প্যাকেজ" are no longer a separate row of
+ * FeatureCards below the dashboard — per this project's own decision,
+ * they're folded directly into the grid (see the `.quickActionCard`
+ * cells) so the whole screen reads as one cohesive dashboard rather than
+ * "charts, then also a separate app-launcher section."
  *
  * There is no more separate "Analytics" screen/card — that content lives
  * directly here now (see AppRouter.jsx's own decision to drop the
  * "analytics" view entirely).
  *
  * One shared `timeRange` (see TimeRangeSelector) drives every chart at
- * once; the stats strip and the daily order detail are each independent
- * of it (see StatsStrip's own doc comment on why "today"/"this month"
- * stay fixed, and DailyOrderDetail's own date picker for why a specific
- * day is its own separate concern from a range).
- *
- * "নতুন সেশন" opens NewSessionModal first (purchase date / ordered-by
- * person — both optional, see that component's own doc comment) rather
- * than creating the Set immediately. Only on the modal's "শুরু করুন" does
- * the Set actually get created — cancelling leaves the landing page
- * exactly as it was, no orphaned Set.
+ * once; the KPI cards and the daily order detail are each independent of
+ * it (see computeStats' own doc comment on why "today"/"this month" stay
+ * fixed, and DailyOrderDetail's own date picker for why a specific day is
+ * its own separate concern from a range).
  */
 export default function LandingPage() {
   const { dispatch } = useAppState();
@@ -110,84 +114,107 @@ export default function LandingPage() {
     dispatch({ type: "OPEN_SESSION", payload: set.id });
   }
 
-  function handleOpenSession(setId) {
-    dispatch({ type: "OPEN_SESSION", payload: setId });
+  if (status === "loading") {
+    return (
+      <div className={styles.loadingScreen}>
+        <p className={styles.loadingNote}>লোড হচ্ছে…</p>
+      </div>
+    );
   }
 
   return (
     <div className={styles.dashboard}>
-      <StatsStrip
-        todaySales={stats.todaySales}
-        monthSales={stats.monthSales}
-        totalSessions={stats.totalSessions}
-      />
-
-      {status === "loading" && <p className={styles.loadingNote}>লোড হচ্ছে…</p>}
-
-      {status === "ready" && (
-        <>
-          <div className={styles.rangeRow}>
-            <TimeRangeSelector value={timeRange} onChange={setTimeRange} />
-          </div>
-
-          <div className={chartCardStyles.card}>
-            <p className={chartCardStyles.title}>আয়ের প্রবণতা</p>
-            <IncomeTrendChart data={incomeTrend} />
-          </div>
-
-          <div className={styles.chartGrid}>
-            <div className={chartCardStyles.card}>
-              <p className={chartCardStyles.title}>
-                ক্যাটাগরি অনুযায়ী বিক্রয়
-              </p>
-              <BreakdownBarChart data={categoryBreakdown} />
-            </div>
-            <div className={chartCardStyles.card}>
-              <p className={chartCardStyles.title}>জনপ্রিয় প্যাকেজ</p>
-              <BreakdownBarChart data={topPackages} />
-            </div>
-            <div className={chartCardStyles.card}>
-              <p className={chartCardStyles.title}>
-                অর্ডারকারী ব্যক্তি অনুযায়ী
-              </p>
-              <BreakdownBarChart data={personBreakdown} />
-            </div>
-            <div className={chartCardStyles.card}>
-              <p className={chartCardStyles.title}>ক্রেতা অনুযায়ী</p>
-              <BreakdownBarChart data={buyerBreakdown} />
-            </div>
-          </div>
-
-          <DailyOrderDetail
-            selectedDate={selectedDate}
-            onDateChange={setSelectedDate}
-            lines={dailyLines}
-          />
-
-          <RecentSessions rows={rows} onOpenSession={handleOpenSession} />
-        </>
-      )}
-
-      <div className={styles.quickActions}>
-        <FeatureCard
-          icon="📄"
-          title="নতুন সেশন"
-          description="নতুন বিল বা চালান তৈরি শুরু করুন"
-          onClick={() => setIsNewSessionModalOpen(true)}
+      <div className={styles.topRow}>
+        <KpiCard
+          label="আজকের বিক্রয়"
+          value={`৳${stats.todaySales.toLocaleString("bn-BD")}`}
+          trendPct={stats.todayTrendPct}
+          trendLabel="গতকালের তুলনায়"
         />
-        <FeatureCard
-          icon="🕐"
-          title="আগের সেশনসমূহ"
-          description="পুরনো সেশন খুঁজুন ও চালিয়ে যান"
+        <KpiCard
+          label="এই মাসের আয়"
+          value={`৳${stats.monthSales.toLocaleString("bn-BD")}`}
+          trendPct={stats.monthTrendPct}
+          trendLabel="গত মাসের তুলনায়"
+        />
+        <KpiCard
+          label="মোট সেশন"
+          value={stats.totalSessions.toLocaleString("bn-BD")}
+          trendPct={null}
+          trendLabel="সর্বমোট"
+        />
+        <button
+          type="button"
+          className={styles.quickActionCard}
+          onClick={() => setIsNewSessionModalOpen(true)}
+        >
+          <span className={styles.quickActionIcon}>📄</span>
+          <span className={styles.quickActionLabel}>নতুন সেশন</span>
+        </button>
+        <button
+          type="button"
+          className={styles.quickActionCard}
           onClick={() =>
             dispatch({ type: "SET_VIEW", payload: "previousSessions" })
           }
-        />
-        <FeatureCard
-          icon="📦"
-          title="প্যাকেজ"
-          description="মেনু প্যাকেজ দেখুন ও এডিট করুন"
+        >
+          <span className={styles.quickActionIcon}>🕐</span>
+          <span className={styles.quickActionLabel}>আগের সেশনসমূহ</span>
+        </button>
+        <button
+          type="button"
+          className={styles.quickActionCard}
           onClick={() => dispatch({ type: "SET_VIEW", payload: "packages" })}
+        >
+          <span className={styles.quickActionIcon}>📦</span>
+          <span className={styles.quickActionLabel}>প্যাকেজ</span>
+        </button>
+      </div>
+
+      <div className={styles.rangeRow}>
+        <TimeRangeSelector value={timeRange} onChange={setTimeRange} />
+      </div>
+
+      <div className={styles.mainGrid}>
+        <div className={`${styles.card} ${styles.incomeCard}`}>
+          <p className={styles.cardTitle}>আয়ের প্রবণতা</p>
+          <div className={styles.chartBody}>
+            <IncomeTrendChart data={incomeTrend} />
+          </div>
+        </div>
+
+        <div className={`${styles.card} ${styles.donutCard}`}>
+          <p className={styles.cardTitle}>ক্যাটাগরি অনুযায়ী বিক্রয়</p>
+          <DonutChart data={categoryBreakdown} />
+        </div>
+
+        <div className={styles.card}>
+          <p className={styles.cardTitle}>জনপ্রিয় প্যাকেজ</p>
+          <div className={styles.chartBody}>
+            <BreakdownBarChart data={topPackages} />
+          </div>
+        </div>
+
+        <div className={styles.card}>
+          <p className={styles.cardTitle}>অর্ডারকারী ব্যক্তি</p>
+          <div className={styles.chartBody}>
+            <BreakdownBarChart data={personBreakdown} />
+          </div>
+        </div>
+
+        <div className={styles.card}>
+          <p className={styles.cardTitle}>ক্রেতা অনুযায়ী</p>
+          <div className={styles.chartBody}>
+            <BreakdownBarChart data={buyerBreakdown} />
+          </div>
+        </div>
+      </div>
+
+      <div className={styles.bottomRow}>
+        <DailyOrderDetail
+          selectedDate={selectedDate}
+          onDateChange={setSelectedDate}
+          lines={dailyLines}
         />
       </div>
 

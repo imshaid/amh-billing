@@ -1,44 +1,156 @@
 .dashboard {
-  padding: var(--space-xl) var(--space-lg);
-  max-width: 1100px;
-  margin: 0 auto;
+  height: 100%;
+  padding: var(--space-md) var(--space-lg);
   display: flex;
   flex-direction: column;
-  gap: var(--space-lg);
+  gap: var(--space-sm);
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.loadingScreen {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .loadingNote {
   font-family: var(--font-bengali);
   font-size: 0.85rem;
   color: var(--chrome-text-muted);
-  text-align: center;
+}
+
+/* Row 1: KPI cards + the three quick-action cards, all in one dense row —
+   see this project's own decision to fold navigation directly into the
+   dashboard grid rather than as a separate section below it. */
+.topRow {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: var(--space-sm);
+  flex-shrink: 0;
+}
+
+.quickActionCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  background: var(--chrome-accent);
+  color: #ffffff;
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  padding: var(--space-sm);
+}
+
+.quickActionCard:hover {
+  background: var(--chrome-accent-hover);
+}
+
+.quickActionIcon {
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.quickActionLabel {
+  font-family: var(--font-bengali);
+  font-size: 0.72rem;
+  font-weight: 600;
+  white-space: nowrap;
 }
 
 .rangeRow {
   display: flex;
   justify-content: flex-end;
+  flex-shrink: 0;
 }
 
-.chartGrid {
+/* Row 2: the main chart grid — income trend (wide) + donut + three
+   breakdown bar charts, all sized to fill remaining vertical space
+   equally (flex: 1 on .dashboard's children below), not stacked to
+   whatever height each chart naturally wants. This is what makes the
+   whole dashboard fit one viewport on large screens without scrolling. */
+.mainGrid {
+  flex: 1;
+  min-height: 0;
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: var(--space-md);
+  grid-template-columns: repeat(5, 1fr);
+  grid-template-rows: 1fr;
+  gap: var(--space-sm);
 }
 
-.quickActions {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: var(--space-md);
-  margin-top: var(--space-sm);
+.incomeCard {
+  grid-column: span 2;
 }
 
-/* NOTE: literal copy of --breakpoint-mobile — see WorkspaceView.module.css. */
+.donutCard {
+  grid-column: span 1;
+}
+
+.card {
+  background: #ffffff;
+  border: 1px solid var(--chrome-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-sm) var(--space-md);
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+.cardTitle {
+  font-family: var(--font-bengali);
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--chrome-text);
+  margin: 0 0 4px 0;
+  flex-shrink: 0;
+}
+
+.chartBody {
+  flex: 1;
+  min-height: 0;
+}
+
+.bottomRow {
+  flex-shrink: 0;
+}
+
+/* NOTE: literal copy of --breakpoint-mobile — see WorkspaceView.module.css.
+   Below this width the dashboard is no longer forced into one screen —
+   see this project's own decision: "non-scrollable" is a large-screen
+   requirement only, a phone genuinely can't show this much data at once
+   without either scrolling or becoming illegibly small. */
 @media (max-width: 768px) {
-  .chartGrid {
-    grid-template-columns: 1fr;
+  .dashboard {
+    height: auto;
+    overflow: visible;
+    padding: var(--space-md);
   }
 
-  .quickActions {
-    grid-template-columns: 1fr;
+  .topRow {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .mainGrid {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+  }
+
+  .card {
+    min-height: 220px;
+  }
+
+  .donutCard {
+    min-height: 260px;
+  }
+}
+
+@media (min-width: 769px) and (max-width: 1100px) {
+  .topRow {
+    grid-template-columns: repeat(3, 1fr);
   }
 }

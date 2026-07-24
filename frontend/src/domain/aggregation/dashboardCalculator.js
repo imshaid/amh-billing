@@ -112,7 +112,13 @@ export function filterRowsByRange(rows, range) {
 /**
  * @typedef {Object} DashboardStats
  * @property {number} todaySales
+ * @property {number} yesterdaySales
+ * @property {number|null} todayTrendPct  Percent change vs yesterday, or
+ *   `null` if yesterday had zero sales (division by zero — shown as "—"
+ *   rather than a misleading "+∞%" or "0%").
  * @property {number} monthSales
+ * @property {number} lastMonthSales
+ * @property {number|null} monthTrendPct  Same idea, vs last calendar month.
  * @property {number} totalSessions
  */
 
@@ -124,24 +130,51 @@ export function filterRowsByRange(rows, range) {
  * @returns {DashboardStats}
  */
 export function computeStats(allRows) {
-  const todayKey = toDateOnly(new Date().toISOString());
+  const today = new Date();
+  const todayKey = toDateOnly(today.toISOString());
   const thisMonthKey = todayKey.slice(0, 7); // "YYYY-MM"
 
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+  const yesterdayKey = toDateOnly(yesterday.toISOString());
+
+  const lastMonthDate = new Date(today);
+  lastMonthDate.setMonth(lastMonthDate.getMonth() - 1);
+  const lastMonthKey = toDateOnly(lastMonthDate.toISOString()).slice(0, 7);
+
   let todaySales = 0;
+  let yesterdaySales = 0;
   let monthSales = 0;
+  let lastMonthSales = 0;
 
   for (const row of allRows) {
     const dateOnly = toDateOnly(row.displayDate);
     if (!dateOnly) continue;
     if (dateOnly === todayKey) todaySales += row.total;
+    if (dateOnly === yesterdayKey) yesterdaySales += row.total;
     if (dateOnly.slice(0, 7) === thisMonthKey) monthSales += row.total;
+    if (dateOnly.slice(0, 7) === lastMonthKey) lastMonthSales += row.total;
   }
 
   return {
     todaySales,
+    yesterdaySales,
+    todayTrendPct: computeTrendPct(todaySales, yesterdaySales),
     monthSales,
+    lastMonthSales,
+    monthTrendPct: computeTrendPct(monthSales, lastMonthSales),
     totalSessions: allRows.length,
   };
+}
+
+/**
+ * @param {number} current
+ * @param {number} previous
+ * @returns {number|null}
+ */
+function computeTrendPct(current, previous) {
+  if (previous === 0) return current === 0 ? 0 : null;
+  return ((current - previous) / previous) * 100;
 }
 
 /**

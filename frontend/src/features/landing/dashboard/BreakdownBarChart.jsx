@@ -22,28 +22,31 @@ import styles from "./ChartCard.module.css";
  * long enough that vertical bars would need rotated/truncated x-axis
  * labels; horizontal bars give labels their own full-width row instead.
  *
+ * Capped to the top `maxItems` slices and fills the parent container's
+ * height (`height="100%"`, not a per-slice-count computed height) — see
+ * this project's own decision for a single-screen, non-scrollable
+ * dashboard on large viewports: every card here has a fixed height set by
+ * the CSS grid it lives in (see LandingPage.module.css), so the chart
+ * itself must fit that budget rather than grow with the data.
+ *
  * @param {{
  *   data: import('../../../domain/aggregation/dashboardCalculator.js').BreakdownSlice[],
- *   height?: number,
+ *   maxItems?: number,
  * }} props
  */
-export default function BreakdownBarChart({ data, height }) {
+export default function BreakdownBarChart({ data, maxItems = 4 }) {
   if (data.length === 0) {
     return <p className={styles.emptyState}>এই সময়ে কোনো তথ্য নেই।</p>;
   }
 
-  // Longer labels need more chart height per bar to stay readable — this
-  // scales with the number of slices rather than a fixed height, so a
-  // 3-slice chart isn't mostly empty space and an 8-slice one isn't
-  // cramped.
-  const chartHeight = height ?? Math.max(180, data.length * 42);
+  const shown = data.slice(0, maxItems);
 
   return (
-    <ResponsiveContainer width="100%" height={chartHeight}>
+    <ResponsiveContainer width="100%" height="100%">
       <BarChart
-        data={data}
+        data={shown}
         layout="vertical"
-        margin={{ top: 4, right: 24, left: 8, bottom: 4 }}
+        margin={{ top: 2, right: 20, left: 4, bottom: 2 }}
       >
         <CartesianGrid
           strokeDasharray="3 3"
@@ -52,18 +55,18 @@ export default function BreakdownBarChart({ data, height }) {
         />
         <XAxis
           type="number"
-          tick={{ fontSize: 11, fill: "var(--chrome-text-muted)" }}
+          tick={{ fontSize: 10, fill: "var(--chrome-text-muted)" }}
           tickFormatter={(v) => `৳${v}`}
         />
         <YAxis
           type="category"
           dataKey="label"
-          width={120}
-          tick={{ fontSize: 11, fill: "var(--chrome-text)" }}
+          width={90}
+          tick={{ fontSize: 10, fill: "var(--chrome-text)" }}
         />
         <Tooltip
           formatter={(value) => [`৳${value.toLocaleString("bn-BD")}`, "মোট"]}
-          contentStyle={{ fontSize: "0.8rem", fontFamily: "var(--font-ui)" }}
+          contentStyle={{ fontSize: "0.75rem", fontFamily: "var(--font-ui)" }}
         />
         <Bar
           dataKey="total"

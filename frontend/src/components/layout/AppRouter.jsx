@@ -115,7 +115,13 @@ export default function AppRouter() {
         />
       )}
 
-      <div className={isWorkspace ? styles.viewAreaNoScroll : styles.viewArea}>
+      <div
+        className={
+          isWorkspace || state.currentView === "landing"
+            ? styles.viewAreaNoScroll
+            : styles.viewArea
+        }
+      >
         {state.currentView === "landing" && <LandingPage />}
         {isWorkspace && (
           <WorkspaceView

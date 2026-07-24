@@ -1,0 +1,48 @@
+.card {
+  background: #ffffff;
+  border: 1px solid var(--chrome-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-sm) var(--space-md);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.label {
+  font-family: var(--font-bengali);
+  font-size: 0.72rem;
+  color: var(--chrome-text-muted);
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.value {
+  font-family: var(--font-ui);
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--chrome-text);
+  margin: 0;
+  line-height: 1.1;
+}
+
+.trend {
+  font-family: var(--font-ui);
+  font-size: 0.7rem;
+  color: var(--chrome-text-muted);
+  margin: 0;
+}
+
+.trendUp {
+  color: #1a7f37;
+}
+
+.trendDown {
+  color: #b3261e;
+}
+
+.trendLabel {
+  color: var(--chrome-text-muted);
+}

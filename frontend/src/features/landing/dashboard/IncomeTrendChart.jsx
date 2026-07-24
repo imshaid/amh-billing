@@ -25,20 +25,21 @@ export default function IncomeTrendChart({ data }) {
   }
 
   return (
-    <ResponsiveContainer width="100%" height={260}>
+    <ResponsiveContainer width="100%" height="100%">
       <BarChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
         <CartesianGrid strokeDasharray="3 3" stroke="var(--chrome-border)" />
         <XAxis
           dataKey="label"
-          tick={{ fontSize: 11, fill: "var(--chrome-text-muted)" }}
+          tick={{ fontSize: 10, fill: "var(--chrome-text-muted)" }}
         />
         <YAxis
-          tick={{ fontSize: 11, fill: "var(--chrome-text-muted)" }}
+          tick={{ fontSize: 10, fill: "var(--chrome-text-muted)" }}
           tickFormatter={(v) => `৳${v}`}
+          width={48}
         />
         <Tooltip
           formatter={(value) => [`৳${value.toLocaleString("bn-BD")}`, "আয়"]}
-          contentStyle={{ fontSize: "0.8rem", fontFamily: "var(--font-ui)" }}
+          contentStyle={{ fontSize: "0.75rem", fontFamily: "var(--font-ui)" }}
         />
         <Bar
           dataKey="total"

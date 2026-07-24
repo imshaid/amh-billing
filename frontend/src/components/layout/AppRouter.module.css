@@ -12,9 +12,12 @@
 
 /* WorkspaceView manages its own internal scrolling (CanvasArea/BottomPanel),
    so it should not also get .viewArea's overflow-y — that would create two
-   nested scrollbars. The other views (landing, previousSessions, packages,
-   analytics) are simple scrollable documents and rely on .viewArea's own
-   scroll instead. */
+   nested scrollbars. LandingPage (the dashboard) also uses this no-scroll
+   container on large screens — see this project's own decision for a
+   non-scrollable, single-screen dashboard — and switches to its own
+   internal scroll via a media query below a height/width threshold (see
+   LandingPage.module.css). previousSessions/packages are simple scrollable
+   documents and rely on .viewArea's own scroll instead. */
 .viewAreaNoScroll {
   flex: 1;
   min-height: 0;
