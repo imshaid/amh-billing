@@ -47,4 +47,30 @@
   --chrome-accent: #285aa0;
   --chrome-accent-hover: #1f4680;
   --chrome-accent-bg: #eaf0fb;
+
+  /* Dashboard-only accent palette — see this project's own decision: a
+     real business dashboard (KPI cards, category/buyer/person charts)
+     needs multiple distinguishing colors, not the single neutral
+     --chrome-accent the editor chrome deliberately sticks to. Kept as
+     separate tokens rather than repurposing --chrome-accent for this,
+     so the workspace editor's "quiet/neutral" chrome and the dashboard's
+     "colorful, information-dense" look can diverge without one
+     accidentally bleeding into the other.
+     - blue    → income/revenue (matches the brand blue's hue family)
+     - teal    → sessions/activity
+     - orange  → packages/products
+     - purple  → people (buyer, ordered-by-person)
+     - red     → negative trend only, never a category color */
+  --dash-blue: #2563eb;
+  --dash-blue-bg: #eff6ff;
+  --dash-teal: #0d9488;
+  --dash-teal-bg: #f0fdfa;
+  --dash-orange: #ea580c;
+  --dash-orange-bg: #fff7ed;
+  --dash-purple: #7c3aed;
+  --dash-purple-bg: #f5f3ff;
+  --dash-red: #dc2626;
+  --dash-green: #16a34a;
+  --dash-surface: #ffffff;
+  --dash-bg: #f4f6fa;
 }

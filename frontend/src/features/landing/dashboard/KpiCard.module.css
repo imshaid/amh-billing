@@ -1,12 +1,48 @@
 .card {
-  background: #ffffff;
+  background: var(--dash-surface);
   border: 1px solid var(--chrome-border);
   border-radius: var(--radius-md);
   padding: var(--space-sm) var(--space-md);
   display: flex;
-  flex-direction: column;
-  gap: 2px;
+  align-items: center;
+  gap: var(--space-sm);
   min-width: 0;
+}
+
+.iconChip {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.15rem;
+}
+
+.chip_blue {
+  background: var(--dash-blue-bg);
+  color: var(--dash-blue);
+}
+
+.chip_teal {
+  background: var(--dash-teal-bg);
+  color: var(--dash-teal);
+}
+
+.chip_orange {
+  background: var(--dash-orange-bg);
+  color: var(--dash-orange);
+}
+
+.chip_purple {
+  background: var(--dash-purple-bg);
+  color: var(--dash-purple);
+}
+
+.body {
+  min-width: 0;
+  flex: 1;
 }
 
 .label {
@@ -19,30 +55,50 @@
   text-overflow: ellipsis;
 }
 
+.valueRow {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
 .value {
   font-family: var(--font-ui);
-  font-size: 1.35rem;
+  font-size: 1.3rem;
   font-weight: 700;
   color: var(--chrome-text);
   margin: 0;
-  line-height: 1.1;
+  line-height: 1.15;
+  white-space: nowrap;
 }
 
-.trend {
+.trendPill {
   font-family: var(--font-ui);
-  font-size: 0.7rem;
-  color: var(--chrome-text-muted);
-  margin: 0;
+  font-size: 0.65rem;
+  font-weight: 700;
+  border-radius: 999px;
+  padding: 1px 7px;
+  white-space: nowrap;
 }
 
 .trendUp {
-  color: #1a7f37;
+  background: #dcfce7;
+  color: var(--dash-green);
 }
 
 .trendDown {
-  color: #b3261e;
+  background: #fee2e2;
+  color: var(--dash-red);
+}
+
+.trendFlat {
+  background: #f1f5f9;
+  color: var(--chrome-text-muted);
 }
 
 .trendLabel {
+  font-family: var(--font-bengali);
+  font-size: 0.65rem;
   color: var(--chrome-text-muted);
+  margin: 1px 0 0 0;
 }

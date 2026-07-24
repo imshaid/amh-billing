@@ -6,6 +6,7 @@
   gap: var(--space-sm);
   box-sizing: border-box;
   overflow: hidden;
+  background: var(--dash-bg);
 }
 
 .loadingScreen {
@@ -13,6 +14,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  background: var(--dash-bg);
 }
 
 .loadingNote {
@@ -33,31 +35,42 @@
 
 .quickActionCard {
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 4px;
-  background: var(--chrome-accent);
-  color: #ffffff;
-  border: none;
+  gap: 8px;
+  background: var(--dash-surface);
+  border: 1px solid var(--chrome-border);
+  border-left: 4px solid var(--dash-blue);
   border-radius: var(--radius-md);
   cursor: pointer;
   padding: var(--space-sm);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
 }
 
 .quickActionCard:hover {
-  background: var(--chrome-accent-hover);
+  border-color: var(--dash-blue);
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.14);
+}
+
+.quickActionCard:nth-child(5) {
+  border-left-color: var(--dash-teal);
+}
+
+.quickActionCard:nth-child(6) {
+  border-left-color: var(--dash-orange);
 }
 
 .quickActionIcon {
-  font-size: 1.1rem;
+  font-size: 1.2rem;
   line-height: 1;
+  flex-shrink: 0;
 }
 
 .quickActionLabel {
   font-family: var(--font-bengali);
-  font-size: 0.72rem;
-  font-weight: 600;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--chrome-text);
   white-space: nowrap;
 }
 
@@ -90,7 +103,7 @@
 }
 
 .card {
-  background: #ffffff;
+  background: var(--dash-surface);
   border: 1px solid var(--chrome-border);
   border-radius: var(--radius-md);
   padding: var(--space-sm) var(--space-md);
@@ -98,15 +111,42 @@
   flex-direction: column;
   min-width: 0;
   min-height: 0;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
 }
 
 .cardTitle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   font-family: var(--font-bengali);
   font-size: 0.78rem;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--chrome-text);
-  margin: 0 0 4px 0;
+  margin: 0 0 6px 0;
   flex-shrink: 0;
+}
+
+.titleDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.dot_blue {
+  background: var(--dash-blue);
+}
+
+.dot_teal {
+  background: var(--dash-teal);
+}
+
+.dot_orange {
+  background: var(--dash-orange);
+}
+
+.dot_purple {
+  background: var(--dash-purple);
 }
 
 .chartBody {

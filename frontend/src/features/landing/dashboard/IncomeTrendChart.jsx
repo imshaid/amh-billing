@@ -1,7 +1,7 @@
 import {
   ResponsiveContainer,
-  BarChart,
-  Bar,
+  AreaChart,
+  Area,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -10,10 +10,12 @@ import {
 import styles from "./ChartCard.module.css";
 
 /**
- * Income over time — bars, not a line, since the underlying data is
- * discrete per-day/per-month totals rather than a continuously sampled
- * quantity; a bar chart doesn't visually imply interpolation between
- * points the way a line does.
+ * Income over time — a filled area chart with a gradient, matching the
+ * reference dashboard's "Revenue" widget look (see this project's own
+ * decision after reference research) rather than a flat bar chart. The
+ * gradient fade communicates magnitude/trend at a glance the way plain
+ * bars don't, and is the standard premium-dashboard treatment for a
+ * time-series income metric.
  *
  * @param {{
  *   data: import('../../../domain/aggregation/dashboardCalculator.js').IncomePoint[],
@@ -26,7 +28,17 @@ export default function IncomeTrendChart({ data }) {
 
   return (
     <ResponsiveContainer width="100%" height="100%">
-      <BarChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+      <AreaChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+        <defs>
+          <linearGradient id="incomeFill" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="var(--dash-blue)" stopOpacity={0.35} />
+            <stop
+              offset="100%"
+              stopColor="var(--dash-blue)"
+              stopOpacity={0.02}
+            />
+          </linearGradient>
+        </defs>
         <CartesianGrid strokeDasharray="3 3" stroke="var(--chrome-border)" />
         <XAxis
           dataKey="label"
@@ -41,12 +53,16 @@ export default function IncomeTrendChart({ data }) {
           formatter={(value) => [`৳${value.toLocaleString("bn-BD")}`, "আয়"]}
           contentStyle={{ fontSize: "0.75rem", fontFamily: "var(--font-ui)" }}
         />
-        <Bar
+        <Area
+          type="monotone"
           dataKey="total"
-          fill="var(--chrome-accent)"
-          radius={[3, 3, 0, 0]}
+          stroke="var(--dash-blue)"
+          strokeWidth={2.5}
+          fill="url(#incomeFill)"
+          dot={{ r: 3, fill: "var(--dash-blue)", strokeWidth: 0 }}
+          activeDot={{ r: 5 }}
         />
-      </BarChart>
+      </AreaChart>
     </ResponsiveContainer>
   );
 }

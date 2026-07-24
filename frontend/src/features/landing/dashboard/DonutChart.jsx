@@ -1,18 +1,17 @@
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import styles from "./DonutChart.module.css";
 
-/** Small, muted palette — one accent + a few neutral steps, matching this
- * project's own "restrained color" convention (see tokens.css) rather
- * than a rainbow of category colors, which reference dashboards avoid
- * for exactly this reason (color should carry meaning, not decoration). */
+/** Multi-color palette — see this project's own decision and tokens.css's
+ * --dash-* tokens: a real dashboard distinguishes categories by color, not
+ * by shade-of-one-hue. Cycles through the full dashboard accent set. */
 const COLORS = [
-  "var(--chrome-accent)",
-  "#5b8fd6",
-  "#8fb3e6",
-  "#b8d0f0",
-  "#d8e4f7",
-  "#94a3b8",
-  "#cbd5e1",
+  "var(--dash-blue)",
+  "var(--dash-orange)",
+  "var(--dash-teal)",
+  "var(--dash-purple)",
+  "#f59e0b",
+  "#ec4899",
+  "#64748b",
 ];
 
 /**
@@ -38,33 +37,38 @@ export default function DonutChart({ data, centerLabel = "মোট" }) {
 
   return (
     <div className={styles.wrapper}>
-      <ResponsiveContainer width="100%" height={140}>
-        <PieChart>
-          <Pie
-            data={data}
-            dataKey="total"
-            nameKey="label"
-            innerRadius="65%"
-            outerRadius="100%"
-            paddingAngle={2}
-            strokeWidth={0}
-          >
-            {data.map((_, i) => (
-              <Cell key={i} fill={COLORS[i % COLORS.length]} />
-            ))}
-          </Pie>
-          <Tooltip
-            formatter={(value, name) => [
-              `৳${value.toLocaleString("bn-BD")}`,
-              name,
-            ]}
-            contentStyle={{ fontSize: "0.75rem", fontFamily: "var(--font-ui)" }}
-          />
-        </PieChart>
-      </ResponsiveContainer>
-      <div className={styles.centerOverlay}>
-        <p className={styles.centerValue}>৳{total.toLocaleString("bn-BD")}</p>
-        <p className={styles.centerLabel}>{centerLabel}</p>
+      <div className={styles.ringArea}>
+        <ResponsiveContainer width="100%" height="100%">
+          <PieChart>
+            <Pie
+              data={data}
+              dataKey="total"
+              nameKey="label"
+              innerRadius="68%"
+              outerRadius="100%"
+              paddingAngle={2}
+              strokeWidth={0}
+            >
+              {data.map((_, i) => (
+                <Cell key={i} fill={COLORS[i % COLORS.length]} />
+              ))}
+            </Pie>
+            <Tooltip
+              formatter={(value, name) => [
+                `৳${value.toLocaleString("bn-BD")}`,
+                name,
+              ]}
+              contentStyle={{
+                fontSize: "0.75rem",
+                fontFamily: "var(--font-ui)",
+              }}
+            />
+          </PieChart>
+        </ResponsiveContainer>
+        <div className={styles.centerOverlay}>
+          <p className={styles.centerValue}>৳{total.toLocaleString("bn-BD")}</p>
+          <p className={styles.centerLabel}>{centerLabel}</p>
+        </div>
       </div>
 
       <div className={styles.legend}>

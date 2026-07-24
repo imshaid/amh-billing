@@ -2,12 +2,26 @@ import {
   ResponsiveContainer,
   BarChart,
   Bar,
+  Cell,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
 } from "recharts";
 import styles from "./ChartCard.module.css";
+
+/** Multi-color palette — see DonutChart.jsx's own doc comment and this
+ * project's own decision for a real, colorful dashboard rather than a
+ * single monochrome accent everywhere. */
+const COLORS = [
+  "var(--dash-blue)",
+  "var(--dash-orange)",
+  "var(--dash-teal)",
+  "var(--dash-purple)",
+  "#f59e0b",
+  "#ec4899",
+  "#64748b",
+];
 
 /**
  * Horizontal bar chart shared by every "breakdown" report — category,
@@ -22,12 +36,18 @@ import styles from "./ChartCard.module.css";
  * long enough that vertical bars would need rotated/truncated x-axis
  * labels; horizontal bars give labels their own full-width row instead.
  *
+ * Each bar gets its own color from the dashboard palette (cycling through
+ * COLORS) rather than one flat color for every bar — see this project's
+ * own decision: a real dashboard distinguishes items by color, which also
+ * makes a 4-bar chart visually match the multi-color KPI cards/donut
+ * above it instead of looking like a separate, flatter design language.
+ *
  * Capped to the top `maxItems` slices and fills the parent container's
- * height (`height="100%"`, not a per-slice-count computed height) — see
- * this project's own decision for a single-screen, non-scrollable
- * dashboard on large viewports: every card here has a fixed height set by
- * the CSS grid it lives in (see LandingPage.module.css), so the chart
- * itself must fit that budget rather than grow with the data.
+ * height (`height="100%"`) — see this project's own decision for a
+ * single-screen, non-scrollable dashboard on large viewports: every card
+ * here has a fixed height set by the CSS grid it lives in (see
+ * LandingPage.module.css), so the chart itself must fit that budget
+ * rather than grow with the data.
  *
  * @param {{
  *   data: import('../../../domain/aggregation/dashboardCalculator.js').BreakdownSlice[],
@@ -68,11 +88,11 @@ export default function BreakdownBarChart({ data, maxItems = 4 }) {
           formatter={(value) => [`৳${value.toLocaleString("bn-BD")}`, "মোট"]}
           contentStyle={{ fontSize: "0.75rem", fontFamily: "var(--font-ui)" }}
         />
-        <Bar
-          dataKey="total"
-          fill="var(--chrome-accent)"
-          radius={[0, 3, 3, 0]}
-        />
+        <Bar dataKey="total" radius={[0, 4, 4, 0]}>
+          {shown.map((_, i) => (
+            <Cell key={i} fill={COLORS[i % COLORS.length]} />
+          ))}
+        </Bar>
       </BarChart>
     </ResponsiveContainer>
   );

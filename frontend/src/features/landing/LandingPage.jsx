@@ -126,18 +126,24 @@ export default function LandingPage() {
     <div className={styles.dashboard}>
       <div className={styles.topRow}>
         <KpiCard
+          icon="৳"
+          color="blue"
           label="আজকের বিক্রয়"
           value={`৳${stats.todaySales.toLocaleString("bn-BD")}`}
           trendPct={stats.todayTrendPct}
           trendLabel="গতকালের তুলনায়"
         />
         <KpiCard
+          icon="📈"
+          color="teal"
           label="এই মাসের আয়"
           value={`৳${stats.monthSales.toLocaleString("bn-BD")}`}
           trendPct={stats.monthTrendPct}
           trendLabel="গত মাসের তুলনায়"
         />
         <KpiCard
+          icon="📁"
+          color="purple"
           label="মোট সেশন"
           value={stats.totalSessions.toLocaleString("bn-BD")}
           trendPct={null}
@@ -177,33 +183,48 @@ export default function LandingPage() {
 
       <div className={styles.mainGrid}>
         <div className={`${styles.card} ${styles.incomeCard}`}>
-          <p className={styles.cardTitle}>আয়ের প্রবণতা</p>
+          <p className={styles.cardTitle}>
+            <span className={`${styles.titleDot} ${styles.dot_blue}`} />
+            আয়ের প্রবণতা
+          </p>
           <div className={styles.chartBody}>
             <IncomeTrendChart data={incomeTrend} />
           </div>
         </div>
 
         <div className={`${styles.card} ${styles.donutCard}`}>
-          <p className={styles.cardTitle}>ক্যাটাগরি অনুযায়ী বিক্রয়</p>
+          <p className={styles.cardTitle}>
+            <span className={`${styles.titleDot} ${styles.dot_orange}`} />
+            ক্যাটাগরি অনুযায়ী বিক্রয়
+          </p>
           <DonutChart data={categoryBreakdown} />
         </div>
 
         <div className={styles.card}>
-          <p className={styles.cardTitle}>জনপ্রিয় প্যাকেজ</p>
+          <p className={styles.cardTitle}>
+            <span className={`${styles.titleDot} ${styles.dot_orange}`} />
+            জনপ্রিয় প্যাকেজ
+          </p>
           <div className={styles.chartBody}>
             <BreakdownBarChart data={topPackages} />
           </div>
         </div>
 
         <div className={styles.card}>
-          <p className={styles.cardTitle}>অর্ডারকারী ব্যক্তি</p>
+          <p className={styles.cardTitle}>
+            <span className={`${styles.titleDot} ${styles.dot_purple}`} />
+            অর্ডারকারী ব্যক্তি
+          </p>
           <div className={styles.chartBody}>
             <BreakdownBarChart data={personBreakdown} />
           </div>
         </div>
 
         <div className={styles.card}>
-          <p className={styles.cardTitle}>ক্রেতা অনুযায়ী</p>
+          <p className={styles.cardTitle}>
+            <span className={`${styles.titleDot} ${styles.dot_purple}`} />
+            ক্রেতা অনুযায়ী
+          </p>
           <div className={styles.chartBody}>
             <BreakdownBarChart data={buyerBreakdown} />
           </div>
