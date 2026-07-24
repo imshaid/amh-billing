@@ -22,11 +22,38 @@ import styles from "./ChartCard.module.css";
  * flatten whichever metric has the smaller range into an unreadable
  * straight line.
  *
+ * `compact`: renders as a bare sparkline — no axes, grid, legend, or
+ * tooltip, just the revenue line — for use as the wireframe's "Monthly
+ * Revenue (with mini graph)" widget inside the combined Monthly
+ * Order/Revenue card (see LandingPage.jsx), which needs a small trend
+ * indicator, not a full standalone chart.
+ *
  * @param {{
  *   data: import('../../../domain/aggregation/dashboardCalculator.js').YearlyPoint[],
+ *   compact?: boolean,
  * }} props
  */
-export default function YearlyOrderRevenueChart({ data }) {
+export default function YearlyOrderRevenueChart({ data, compact = false }) {
+  if (compact) {
+    return (
+      <ResponsiveContainer width="100%" height="100%">
+        <ComposedChart
+          data={data}
+          margin={{ top: 2, right: 2, left: 2, bottom: 2 }}
+        >
+          <Line
+            type="monotone"
+            dataKey="revenue"
+            stroke="var(--dash-blue)"
+            strokeWidth={2}
+            dot={false}
+            isAnimationActive={false}
+          />
+        </ComposedChart>
+      </ResponsiveContainer>
+    );
+  }
+
   return (
     <ResponsiveContainer width="100%" height="100%">
       <ComposedChart

@@ -125,7 +125,55 @@ export default function LandingPage() {
 
   return (
     <div className={styles.dashboard}>
+      <div className={styles.pageHeader}>
+        <h1 className={styles.pageTitle}>AMH Billing</h1>
+        <div className={styles.headerActions}>
+          <button
+            type="button"
+            className={styles.newSessionButton}
+            onClick={() => setIsNewSessionModalOpen(true)}
+          >
+            + নতুন সেশন
+          </button>
+          <MonthYearNavigator yearMonth={monthYear} onChange={setMonthYear} />
+        </div>
+      </div>
+
       <div className={styles.topSection}>
+        <div className={`${styles.card} ${styles.monthlyCard}`}>
+          <div className={styles.monthlyMetric}>
+            <p className={styles.monthlyLabel}>মাসিক অর্ডার</p>
+            <p className={styles.monthlyValue}>
+              {monthRows.length.toLocaleString("bn-BD")}
+              <span
+                className={`${styles.monthlyTrendInline} ${
+                  stats.monthTrendPct == null
+                    ? ""
+                    : stats.monthTrendPct >= 0
+                      ? styles.trendUp
+                      : styles.trendDown
+                }`}
+              >
+                {stats.monthTrendPct == null
+                  ? "—"
+                  : `${stats.monthTrendPct >= 0 ? "▲" : "▼"} ${Math.abs(stats.monthTrendPct).toFixed(1)}%`}
+              </span>
+            </p>
+          </div>
+
+          <div className={styles.monthlyDivider} />
+
+          <div className={styles.monthlyMetric}>
+            <p className={styles.monthlyLabel}>মাসিক আয়</p>
+            <p className={styles.monthlyValue}>
+              ৳{stats.monthSales.toLocaleString("bn-BD")}
+            </p>
+            <div className={styles.miniChart}>
+              <YearlyOrderRevenueChart data={yearlyTrend} compact />
+            </div>
+          </div>
+        </div>
+
         <div className={styles.kpiBlock}>
           <button
             type="button"
@@ -170,47 +218,9 @@ export default function LandingPage() {
         </div>
 
         <div className={`${styles.card} ${styles.categoriesCard}`}>
-          <div className={styles.cardHeaderRow}>
-            <p className={styles.cardTitle}>ক্যাটাগরি অনুযায়ী বিক্রয়</p>
-            <MonthYearNavigator yearMonth={monthYear} onChange={setMonthYear} />
-          </div>
+          <p className={styles.cardTitle}>ক্যাটাগরি অনুযায়ী বিক্রয়</p>
           <SegmentedCategoryBar data={categoryBreakdown} />
         </div>
-      </div>
-
-      <div className={styles.summaryRow}>
-        <div className={styles.card}>
-          <p className={styles.cardTitle}>আজকের বিক্রয়</p>
-          <p className={styles.summaryValue}>
-            ৳{stats.todaySales.toLocaleString("bn-BD")}
-          </p>
-          <p className={styles.summaryTrend}>
-            {stats.todayTrendPct == null
-              ? "—"
-              : `${stats.todayTrendPct >= 0 ? "▲" : "▼"} ${Math.abs(stats.todayTrendPct).toFixed(1)}%`}{" "}
-            গতকালের তুলনায়
-          </p>
-        </div>
-        <div className={styles.card}>
-          <p className={styles.cardTitle}>এই মাসের আয়</p>
-          <p className={styles.summaryValue}>
-            ৳{stats.monthSales.toLocaleString("bn-BD")}
-          </p>
-          <p className={styles.summaryTrend}>
-            {stats.monthTrendPct == null
-              ? "—"
-              : `${stats.monthTrendPct >= 0 ? "▲" : "▼"} ${Math.abs(stats.monthTrendPct).toFixed(1)}%`}{" "}
-            গত মাসের তুলনায়
-          </p>
-        </div>
-        <button
-          type="button"
-          className={styles.quickActionCard}
-          onClick={() => setIsNewSessionModalOpen(true)}
-        >
-          <span className={styles.quickActionIcon}>📄</span>
-          <span className={styles.quickActionLabel}>নতুন সেশন</span>
-        </button>
       </div>
 
       <div className={styles.mainGrid}>

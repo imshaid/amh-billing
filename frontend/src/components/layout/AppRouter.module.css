@@ -23,3 +23,21 @@
   min-height: 0;
   overflow: hidden;
 }
+
+/* NOTE: literal copy of --breakpoint-mobile — see WorkspaceView.module.css.
+   Below this width, LandingPage's own dashboard grid switches to
+   height:auto/overflow:visible (see LandingPage.module.css) since a real
+   non-scrollable single-screen layout only makes sense on a large
+   viewport — a phone cannot show this much data at once no matter how
+   compact it gets. This container must follow suit and allow scrolling
+   too, or the dashboard's own auto-height content gets silently clipped
+   by this parent's overflow:hidden, which is exactly the "cards
+   disappear on mobile" bug this fixes. WorkspaceView (the other user of
+   this class) is unaffected by this — it manages its own internal
+   scrolling regardless of viewport width, so this parent-level scroll
+   only ever comes into play for the dashboard. */
+@media (max-width: 768px) {
+  .viewAreaNoScroll {
+    overflow-y: auto;
+  }
+}

@@ -49,7 +49,7 @@
   font-size: 0.78rem;
   font-weight: 700;
   color: var(--chrome-text);
-  margin: 0;
+  margin: 0 0 6px 0;
   flex-shrink: 0;
 }
 
@@ -58,15 +58,119 @@
   min-height: 0;
 }
 
-/* Row 1: 2x2 KPI grid (Total Sessions/Packages/Buyers/Addresses — all
-   clickable, see LandingPage.jsx's own onClick handlers) + Categories
-   segmented-bar card with its own Month/Year navigator. */
+/* Top page header: title + (new-session button, then the single global
+   Month/Year navigator) — see this project's own decision: ONE navigator
+   for the whole page (top-right, per the wireframe), not a separate one
+   per card. */
+.pageHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+  flex-shrink: 0;
+}
+
+.pageTitle {
+  font-family: var(--font-bengali);
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--chrome-text);
+  margin: 0;
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.newSessionButton {
+  font-family: var(--font-bengali);
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #ffffff;
+  background: var(--dash-blue);
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 8px 14px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.newSessionButton:hover {
+  background: #1d4ed8;
+}
+
+/* Row 1 — matches the wireframe's own 4-column top row exactly:
+   1) Monthly Order + Monthly Revenue combined card (with mini graph)
+   2) a 2x2 grid: Total Sessions / Total Packages / Total Buyers / Total Addresses
+   3) Categories (segmented bar + cards) — the widest column */
 .topSection {
   display: grid;
-  grid-template-columns: 1.2fr 2fr;
+  grid-template-columns: 1fr 1fr 2fr;
   gap: var(--space-sm);
   flex: 1.1;
   min-height: 0;
+}
+
+.monthlyCard {
+  gap: var(--space-sm);
+}
+
+.monthlyMetric {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.monthlyDivider {
+  height: 1px;
+  background: var(--chrome-border);
+  flex-shrink: 0;
+}
+
+.monthlyLabel {
+  font-family: var(--font-bengali);
+  font-size: 0.72rem;
+  color: var(--chrome-text-muted);
+  margin: 0;
+}
+
+.monthlyValue {
+  font-family: var(--font-ui);
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: var(--chrome-text);
+  margin: 2px 0 0 0;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.monthlyTrendInline {
+  font-size: 0.68rem;
+  font-weight: 700;
+  border-radius: 999px;
+  padding: 1px 6px;
+  background: #f1f5f9;
+  color: var(--chrome-text-muted);
+}
+
+.trendUp {
+  background: #dcfce7 !important;
+  color: #16a34a !important;
+}
+
+.trendDown {
+  background: #fee2e2 !important;
+  color: #dc2626 !important;
+}
+
+.miniChart {
+  flex: 1;
+  min-height: 0;
+  margin-top: 4px;
 }
 
 .kpiBlock {
@@ -114,59 +218,7 @@
   min-width: 0;
 }
 
-/* Row 2: today's sales + this month's income (with trend) + the
-   "নতুন সেশন" quick-action card, all one dense row. */
-.summaryRow {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: var(--space-sm);
-  flex-shrink: 0;
-  min-height: 78px;
-}
-
-.summaryValue {
-  font-family: var(--font-ui);
-  font-size: 1.3rem;
-  font-weight: 700;
-  color: var(--chrome-text);
-  margin: 2px 0 0 0;
-}
-
-.summaryTrend {
-  font-family: var(--font-ui);
-  font-size: 0.7rem;
-  color: var(--chrome-text-muted);
-  margin: 2px 0 0 0;
-}
-
-.quickActionCard {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  background: var(--dash-blue);
-  color: #ffffff;
-  border: none;
-  border-radius: var(--radius-md);
-  cursor: pointer;
-}
-
-.quickActionCard:hover {
-  background: #1d4ed8;
-}
-
-.quickActionIcon {
-  font-size: 1.2rem;
-  line-height: 1;
-}
-
-.quickActionLabel {
-  font-family: var(--font-bengali);
-  font-size: 0.85rem;
-  font-weight: 700;
-}
-
-/* Row 3: Yearly Order/Revenue (wide, own year navigator) + two donuts. */
+/* Row 2: Yearly Order/Revenue (wide, own year navigator) + two donuts. */
 .mainGrid {
   flex: 1.6;
   min-height: 0;
@@ -228,16 +280,16 @@
     padding: var(--space-md);
   }
 
+  .pageHeader {
+    flex-wrap: wrap;
+  }
+
   .topSection {
     grid-template-columns: 1fr;
   }
 
   .kpiBlock {
     grid-template-columns: repeat(2, 1fr);
-  }
-
-  .summaryRow {
-    grid-template-columns: 1fr;
   }
 
   .mainGrid {
@@ -251,9 +303,17 @@
   .card {
     min-height: 220px;
   }
+
+  .miniChart {
+    min-height: 60px;
+  }
 }
 
 @media (min-width: 769px) and (max-width: 1100px) {
+  .topSection {
+    grid-template-columns: 1fr 1fr 1.6fr;
+  }
+
   .mainGrid {
     grid-template-columns: repeat(2, 1fr);
   }
