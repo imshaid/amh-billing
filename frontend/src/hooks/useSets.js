@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
-import { getAllSets, addSet } from "../db/sets.repository.js";
+import { getAllSets, addSet, subscribeToSets } from "../db/sets.repository.js";
 
 /**
- * Loads every Set from IndexedDB and exposes a `refresh` + `createSet` pair
+ * Loads every Set from Supabase and exposes a `refresh` + `createSet` pair
  * so components never call the repository directly — this is the one place
  * that owns "what does the Sidebar's Set list look like right now".
  *
@@ -10,6 +10,11 @@ import { getAllSets, addSet } from "../db/sets.repository.js";
  * that's the one the user almost always wants to resume — this is a display
  * concern local to this hook, separate from `Set.pageIds` ordering (which is
  * about Pages *within* a Set, documented in docs/data-model.md).
+ *
+ * Subscribes to Supabase Realtime (see db/sets.repository.js's
+ * subscribeToSets) so a Set created/renamed/deleted on another device
+ * shows up here automatically — see this project's own decision for
+ * row-level (not keystroke-level) live sync across devices.
  *
  * @returns {{
  *   sets: import('../domain/models/Set.js').Set[],
@@ -39,6 +44,10 @@ export function useSets() {
 
   useEffect(() => {
     refresh();
+    const unsubscribe = subscribeToSets(() => {
+      refresh();
+    });
+    return unsubscribe;
   }, [refresh]);
 
   const createSet = useCallback(

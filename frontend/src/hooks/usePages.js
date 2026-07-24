@@ -1,24 +1,35 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { getPagesBySet } from "../db/pages.repository.js";
-import { pullAndMergeSet } from "../sync/pull.js";
+import {
+  getPagesBySet,
+  subscribeToPagesBySet,
+} from "../db/pages.repository.js";
 
 /**
  * Loads all Pages for a given Set (already ordered by date ascending — see
- * `getPagesBySet`, which uses the `by_setId_date` compound index). Returns
- * `null` for `pages` while `setId` itself is null/undefined, so callers can
- * tell "no Set selected yet" apart from "Set selected but has zero pages".
+ * `getPagesBySet`). Returns `null` for `pages` while `setId` itself is
+ * null/undefined, so callers can tell "no Set selected yet" apart from
+ * "Set selected but has zero pages".
+ *
+ * Subscribes to Supabase Realtime for this specific Set (see
+ * db/pages.repository.js's subscribeToPagesBySet) — see this project's
+ * own decision for "row-level live sync, not keystroke-level": if another
+ * device adds/edits/deletes a Page in this same Set, this device's
+ * workspace picks it up automatically. The subscription is re-created
+ * whenever `setId` changes (switching which Set is open), and torn down
+ * on unmount — see the effect below.
  *
  * `refresh()` only flips `status` to "loading" on the very first fetch for
- * a given `setId`, not on every subsequent call. This matters a lot in
- * practice: every inline edit, page add, and page delete in CanvasArea
- * calls `refresh()` to pick up the write — if each of those also flipped
- * `status` back to "loading", CanvasArea's `status === "loading"` branch
- * would unmount the entire canvas (replacing it with a loading placeholder)
- * and remount it once the fetch resolved, which is what was causing the
- * whole workspace to jump back to the top of the scroll on every keystroke
- * commit or page action. Subsequent refreshes update `pages` in place while
- * `status` stays "ready", so React only re-renders the parts that actually
- * changed instead of tearing down the tree.
+ * a given `setId`, not on every subsequent call (including Realtime-
+ * triggered ones). This matters a lot in practice: every inline edit, page
+ * add, and page delete in CanvasArea calls `refresh()` to pick up the
+ * write — if each of those also flipped `status` back to "loading",
+ * CanvasArea's `status === "loading"` branch would unmount the entire
+ * canvas (replacing it with a loading placeholder) and remount it once the
+ * fetch resolved, which is what was causing the whole workspace to jump
+ * back to the top of the scroll on every keystroke commit or page action.
+ * Subsequent refreshes update `pages` in place while `status` stays
+ * "ready", so React only re-renders the parts that actually changed
+ * instead of tearing down the tree.
  *
  * @param {string|null} setId
  * @returns {{
@@ -42,20 +53,8 @@ export function usePages(setId) {
       return;
     }
     try {
-      const isFirstLoadForThisSet = !hasLoadedOnceRef.current;
-      if (isFirstLoadForThisSet) {
+      if (!hasLoadedOnceRef.current) {
         setStatus("loading");
-        // Pull-on-load (see sync/pull.js's own doc comment): only on the
-        // *first* load for this setId, not every refresh() call — every
-        // inline edit/add/delete already calls refresh() locally to pick
-        // up its own write (see CanvasArea), and re-pulling from Supabase
-        // on every one of those would be both wasteful (a network round
-        // trip per keystroke-commit) and actively wrong (it could race a
-        // push that hasn't landed yet and momentarily show stale data
-        // pulled mid-edit). A pull genuinely only needs to happen once
-        // per "the user just opened this Set", which is exactly what
-        // `isFirstLoadForThisSet` captures.
-        await pullAndMergeSet(setId);
       }
       const result = await getPagesBySet(setId);
       setPages(result);
@@ -71,7 +70,13 @@ export function usePages(setId) {
   useEffect(() => {
     hasLoadedOnceRef.current = false; // a new setId is a fresh load, show loading again
     refresh();
-  }, [refresh]);
+
+    if (!setId) return;
+    const unsubscribe = subscribeToPagesBySet(setId, () => {
+      refresh();
+    });
+    return unsubscribe;
+  }, [setId, refresh]);
 
   return { pages, status, error, refresh };
 }

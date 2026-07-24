@@ -1,5 +1,8 @@
 import { useEffect, useRef, useState } from "react";
-import { getAllPackages } from "../db/packages.repository.js";
+import {
+  getAllPackages,
+  subscribeToPackages,
+} from "../db/packages.repository.js";
 
 /** Display order for grouping — categories not in this list (i.e. `null`,
  * the à la carte items like Biscuit/Juice/Water) are shown first under an
@@ -23,11 +26,19 @@ const CATEGORY_LABELS = {
 };
 
 /**
- * Loads all Packages once and groups them by category for the picker UI.
- * Packages are seeded once at app bootstrap (see App.jsx / seedPackagesIfEmpty)
- * and edited rarely relative to how often they're read, so a one-shot load
- * without a live subscription is enough here — refresh() is exposed for the
- * (future) Package editor to call after a save.
+ * Loads all Packages and groups them by category for the picker UI. Also
+ * subscribes to Supabase Realtime (see db/packages.repository.js's
+ * subscribeToPackages) so that a Package added/edited/deleted on another
+ * device reappears here automatically — see this project's own decision
+ * for "row-level live sync, not keystroke-level": a save on Device A
+ * shows up on Device B without Device B's user doing anything, but two
+ * people editing the exact same field at the exact same moment isn't
+ * coordinated character-by-character.
+ *
+ * `refresh()` is still exposed for the local caller (PackagesScreen/
+ * PackagePickerPopup) to call right after its own save — that keeps the
+ * saving device's own UI responsive immediately, rather than waiting on
+ * its own Realtime echo to come back over the network.
  *
  * @returns {{
  *   groupedPackages: { category: string, label: string, packages: import('../domain/models/Package.js').Package[] }[],
@@ -60,6 +71,10 @@ export function usePackages() {
 
   useEffect(() => {
     refresh();
+    const unsubscribe = subscribeToPackages(() => {
+      refresh();
+    });
+    return unsubscribe;
   }, []);
 
   return { groupedPackages, status, error, refresh };

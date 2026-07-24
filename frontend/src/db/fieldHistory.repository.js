@@ -1,9 +1,14 @@
-import { getDB } from "./client.js";
-import { STORE } from "./schema.js";
-import { schedulePush } from "../sync/pushQueue.js";
-import { pushFieldHistory } from "../sync/syncEngine.js";
+import { supabase } from "./supabaseClient.js";
+import { fieldHistoryToRow, rowToFieldHistory } from "./rowMapping.js";
 
 const MAX_HISTORY_PER_FIELD = 20;
+
+/**
+ * All reads/writes to field_history go through this file, straight to
+ * Supabase — no IndexedDB, no debounce (see this project's own decision
+ * to remove the IndexedDB caching layer entirely — see
+ * packages.repository.js's own doc comment for the full reasoning).
+ */
 
 /**
  * Returns the recently-used values for a given field (newest first), or an
@@ -15,9 +20,13 @@ const MAX_HISTORY_PER_FIELD = 20;
  * @returns {Promise<string[]>}
  */
 export async function getFieldHistory(fieldName) {
-  const db = await getDB();
-  const row = await db.get(STORE.FIELD_HISTORY, fieldName);
-  return row?.values ?? [];
+  const { data, error } = await supabase
+    .from("field_history")
+    .select("*")
+    .eq("field_name", fieldName)
+    .maybeSingle();
+  if (error) throw error;
+  return data ? rowToFieldHistory(data).values : [];
 }
 
 /**
@@ -37,25 +46,20 @@ export async function recordFieldValue(fieldName, value) {
   const trimmed = value?.trim();
   if (!trimmed) return;
 
-  const db = await getDB();
-  const existing = await db.get(STORE.FIELD_HISTORY, fieldName);
-  const previousValues = existing?.values ?? [];
+  const previousValues = await getFieldHistory(fieldName);
 
   const nextValues = [
     trimmed,
     ...previousValues.filter((v) => v !== trimmed),
   ].slice(0, MAX_HISTORY_PER_FIELD);
 
-  // `updatedAt` added alongside sync wiring — field_history predates this
-  // field (see this store's original schema.js entry, which only ever
-  // stored { fieldName, values }), but LWW merge on pull (see
-  // sync/syncEngine.js's pickNewer) needs a timestamp to compare like
-  // every other synced table.
   const entry = {
     fieldName,
     values: nextValues,
     updatedAt: new Date().toISOString(),
   };
-  await db.put(STORE.FIELD_HISTORY, entry);
-  schedulePush(`field_history:${fieldName}`, () => pushFieldHistory(entry));
+  const { error } = await supabase
+    .from("field_history")
+    .upsert(fieldHistoryToRow(entry), { onConflict: "field_name" });
+  if (error) throw error;
 }

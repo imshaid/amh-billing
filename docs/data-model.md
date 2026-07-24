@@ -166,42 +166,39 @@ Pages within a Set are ordered **by `date`**, ascending, by default. This is a d
 export concern — `Set.pageIds` stores the current order, recalculated whenever a page's
 date changes or a new page is added. No drag-and-drop reordering in MVP (future work).
 
-## Local Cache Policy (IndexedDB)
+## Storage & Sync (Supabase-only)
 
-- IndexedDB is the offline-first source of truth on-device.
-- Supabase holds full permanent history.
-- Only `Page` rows are ever purged from IndexedDB — any Page with `synced_at`
-  set and `age > 60 days` is removed on the next sync cycle. It remains fully
-  available in Supabase and will be re-fetched on demand if the user searches
-  history older than 60 days.
-- `Package` and `Set` are never purged from IndexedDB, regardless of age —
-  both are small (reference data / session metadata) and are needed for the
-  app to function offline at all (package picker, Previous Sessions list).
-  They're still synced to Supabase like everything else, purely as a backup —
-  the sync layer just never deletes the local copy of either.
+Supabase is the single storage layer for this app — no local cache, no
+IndexedDB. This app previously had an offline-first IndexedDB caching
+layer with a separate push/pull/Last-Write-Wins sync mechanism to keep it
+in step with Supabase; that entire layer was removed (see this project's
+own decision) after it turned out to be the root cause of recurring
+duplicate-record bugs — a Package renamed on one device could reappear
+under its old name because a stale local copy sitting on another
+device/tab got blindly re-synced. The hotel has reliable wifi, so the
+offline capability that layer existed for wasn't actually needed in
+practice, and removing it also removed that entire bug surface.
 
-## Supabase Sync
-
-Implemented in `frontend/src/sync/` — see that folder's own files for
-mechanism-level detail (this section is the "what and why", not a
-duplicate of the code comments).
-
-- **Push**: debounced per-record (2.5s after the last edit settles — see
-  `sync/pushQueue.js`), triggered from every write in
-  `db/{pages,sets,packages,fieldHistory}.repository.js`. Not real-time —
-  a debounce avoids a network write per keystroke.
-- **Pull**: on load, not on a timer. A Set's Pages are pulled the first
-  time that Set is opened (`sync/pull.js`, wired into `hooks/usePages.js`);
-  Packages/Sets/field_history are pulled once at app startup
-  (`sync/bootstrap.js`), since those stay small regardless of history size.
-- **Conflict resolution**: Last-Write-Wins by `updatedAt` (`pickNewer` in
-  `sync/syncEngine.js`). Chosen over a full CRDT/merge approach because
-  this app is used by a small hotel team from multiple devices, where
-  genuine same-field concurrent edits are rare enough that LWW's
-  simplicity outweighs the (small) risk of one edit losing to another
-  made around the same time.
-- **No manual sync control** — no "sync now" button, no visible sync
-  status. Sync is fully automatic and silent; a failed push/pull is
-  logged to the console but never surfaces as an error to the user, since
-  IndexedDB (not Supabase) is always the source of truth for what's on
-  screen.
+- **Every read/write is a direct, awaited Supabase call** — see
+  `frontend/src/db/*.repository.js`. What you read is what's actually in
+  the database at that moment; there is no local copy that can go stale
+  or duplicate.
+- **Live sync across devices via Supabase Realtime** — `packages`, `sets`,
+  and `pages` (scoped per-Set) each have a `postgres_changes` subscription
+  (see `subscribeToPackages`/`subscribeToSets`/`subscribeToPagesBySet` in
+  the respective repository files, wired into `usePackages`/`useSets`/
+  `usePages`). A save on one device makes every other open device
+  re-fetch and show the change automatically. This is **row-level** live
+  sync, not keystroke-level — two people editing the exact same field at
+  the exact same instant isn't coordinated character-by-character (that
+  would need operational-transform/CRDT infrastructure this app doesn't
+  have); one save simply lands after the other, same as any two sequential
+  edits would.
+- **No conflict resolution logic** — with a single source of truth there's
+  nothing to merge or resolve. The last `update`/`insert` Supabase actually
+  receives is what's stored, full stop.
+- **Duplicate prevention is a database constraint, not app logic** —
+  `packages` has `UNIQUE(name, rate)` (see `supabase_add_unique_constraint.sql`),
+  so a genuine duplicate insert is rejected by Postgres itself.
+- **No manual sync control, no sync status UI** — there's nothing to
+  control; every write already is the sync.

@@ -1,44 +1,40 @@
-import { getDB } from "./client.js";
-import { STORE } from "./schema.js";
+import { supabase } from "./supabaseClient.js";
+import { setToRow, rowToSet } from "./rowMapping.js";
 import { createSet } from "../domain/models/Set.js";
 import { getPagesBySet, deletePage } from "./pages.repository.js";
-import { schedulePush, cancelPush } from "../sync/pushQueue.js";
-import { pushSet, deleteSetRemote } from "../sync/syncEngine.js";
 
 /**
- * Schedules a debounced Supabase push for a Set. Unlike pages.repository.js's
- * schedulePagePush, this never stamps a `syncedAt` back onto the local row —
- * Set has no `syncedAt` field (see domain/models/Set.js) because Sets are
- * never purged from IndexedDB (see this project's own decision — Sets stay
- * local permanently as small session metadata), so there's nothing that
- * needs to read it.
- *
- * @param {import('../domain/models/Set.js').Set} set
+ * All reads/writes to Sets go through this file, straight to Supabase —
+ * no IndexedDB, no debounce, no LWW merge (see this project's own
+ * decision to remove the IndexedDB caching layer entirely — see
+ * packages.repository.js's own doc comment for the full reasoning).
  */
-function scheduleSetPush(set) {
-  schedulePush(`set:${set.id}`, () => pushSet(set));
-}
 
 /** @returns {Promise<import('../domain/models/Set.js').Set|undefined>} */
 export async function getSetById(id) {
-  const db = await getDB();
-  return db.get(STORE.SETS, id);
+  const { data, error } = await supabase
+    .from("sets")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
+  if (error) throw error;
+  return data ? rowToSet(data) : undefined;
 }
 
 /** @returns {Promise<import('../domain/models/Set.js').Set[]>} */
 export async function getAllSets() {
-  const db = await getDB();
-  return db.getAll(STORE.SETS);
+  const { data, error } = await supabase.from("sets").select("*");
+  if (error) throw error;
+  return (data ?? []).map(rowToSet);
 }
 
 /**
  * @param {Partial<import('../domain/models/Set.js').Set>} input
  */
 export async function addSet(input) {
-  const db = await getDB();
   const set = createSet(input);
-  await db.add(STORE.SETS, set);
-  scheduleSetPush(set);
+  const { error } = await supabase.from("sets").insert(setToRow(set));
+  if (error) throw error;
   return set;
 }
 
@@ -47,8 +43,7 @@ export async function addSet(input) {
  * @param {Partial<import('../domain/models/Set.js').Set>} changes
  */
 export async function updateSet(id, changes) {
-  const db = await getDB();
-  const existing = await db.get(STORE.SETS, id);
+  const existing = await getSetById(id);
   if (!existing) {
     throw new Error(`Set not found: ${id}`);
   }
@@ -58,8 +53,11 @@ export async function updateSet(id, changes) {
     id,
     updatedAt: new Date().toISOString(),
   };
-  await db.put(STORE.SETS, updated);
-  scheduleSetPush(updated);
+  const { error } = await supabase
+    .from("sets")
+    .update(setToRow(updated))
+    .eq("id", id);
+  if (error) throw error;
   return updated;
 }
 
@@ -77,30 +75,44 @@ export async function resyncSetPageOrder(setId) {
 }
 
 /**
- * Deletes a Set AND every Page belonging to it — this used to only delete
- * the Set row itself, silently leaving every one of its Bill/Invoice/
- * Summary pages behind as orphans in the `pages` store (unreachable from
- * any Set, but still taking up space and still matched by any future
- * cross-Set query). Deleting the Set is meaningless to the user without
- * this — "delete this session" means the whole session, not just its
- * metadata row.
+ * Deletes a Set AND every Page belonging to it — deleting the Set is
+ * meaningless to the user without this: "delete this session" means the
+ * whole session, not just its metadata row.
+ *
+ * Deletes each Page explicitly first (rather than relying solely on
+ * `pages.set_id ... on delete cascade`, see supabase_schema.sql) so
+ * anything watching per-Page Realtime deletes (if that's ever added)
+ * sees the actual delete events, rather than rows just vanishing as a
+ * side effect of the Set delete.
  *
  * @param {string} id
  */
 export async function deleteSet(id) {
   const pages = await getPagesBySet(id);
-  // Each deletePage() call already cancels that page's own pending push
-  // and issues its own Supabase delete (see pages.repository.js) — no
-  // need to duplicate that here. The Supabase `pages.set_id ... on delete
-  // cascade` (see supabase_schema.sql) would clean these up anyway once
-  // the Set row below is deleted, but deleting them explicitly first
-  // keeps the local and remote deletion paths symmetric rather than
-  // relying on a cascade the local IndexedDB side has no equivalent of.
   await Promise.all(pages.map((page) => deletePage(page.id)));
-  cancelPush(`set:${id}`);
-  const db = await getDB();
-  await db.delete(STORE.SETS, id);
-  deleteSetRemote(id).catch((err) =>
-    console.warn(`[amh-billing] Supabase delete failed for set:${id}:`, err),
-  );
+  const { error } = await supabase.from("sets").delete().eq("id", id);
+  if (error) throw error;
+}
+
+/**
+ * Subscribes to live Set changes via Supabase Realtime — see
+ * packages.repository.js's subscribeToPackages for the full reasoning
+ * (row-level live sync across devices, not keystroke-level).
+ *
+ * @param {() => void} onChange
+ * @returns {() => void} unsubscribe
+ */
+export function subscribeToSets(onChange) {
+  const channel = supabase
+    .channel("sets-changes")
+    .on(
+      "postgres_changes",
+      { event: "*", schema: "public", table: "sets" },
+      onChange,
+    )
+    .subscribe();
+
+  return () => {
+    supabase.removeChannel(channel);
+  };
 }

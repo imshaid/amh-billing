@@ -1,43 +1,51 @@
-import { getDB } from "./client.js";
-import { STORE } from "./schema.js";
+import { supabase } from "./supabaseClient.js";
+import { packageToRow, rowToPackage } from "./rowMapping.js";
 import { createPackage } from "../domain/models/Package.js";
-import { schedulePush, cancelPush } from "../sync/pushQueue.js";
-import { pushPackage, deletePackageRemote } from "../sync/syncEngine.js";
 
 /**
- * Schedules a debounced Supabase push for a Package. Like Set (see
- * sets.repository.js), Package has no `syncedAt` field — Packages are
- * never purged from IndexedDB (see this project's own decision), so
- * there's nothing that needs to read one.
+ * All reads/writes to Packages go through this file, straight to
+ * Supabase — no IndexedDB, no debounce, no LWW merge (see this project's
+ * own decision to remove the IndexedDB caching layer entirely: the hotel
+ * has reliable wifi, offline support wasn't actually needed, and the
+ * dual-storage sync layer was the root cause of recurring
+ * duplicate-record bugs — a Package edited/renamed on one device could
+ * reappear under its old name because a stale local copy on another
+ * device/tab got blindly re-pushed). Every function here is a direct,
+ * awaited Supabase call; what you read is what's actually in the
+ * database at that moment, and what you write lands there immediately.
  *
- * @param {import('../domain/models/Package.js').Package} pkg
- */
-function schedulePackagePush(pkg) {
-  schedulePush(`package:${pkg.id}`, () => pushPackage(pkg));
-}
-
-/**
- * All reads/writes to the `packages` store go through this file. Nothing else
- * in the app should call `db.transaction(STORE.PACKAGES, ...)` directly —
- * that keeps the IndexedDB query shape in one place if the schema changes.
+ * `packages_name_rate_key` (see supabase_add_unique_constraint.sql) is
+ * the actual duplicate-prevention mechanism now — a second insert
+ * sharing an existing (name, rate) pair is rejected by Postgres itself,
+ * not by any client-side check.
  */
 
 /** @returns {Promise<import('../domain/models/Package.js').Package[]>} */
 export async function getAllPackages() {
-  const db = await getDB();
-  return db.getAll(STORE.PACKAGES);
+  const { data, error } = await supabase.from("packages").select("*");
+  if (error) throw error;
+  return (data ?? []).map(rowToPackage);
 }
 
 /** @returns {Promise<import('../domain/models/Package.js').Package|undefined>} */
 export async function getPackageById(id) {
-  const db = await getDB();
-  return db.get(STORE.PACKAGES, id);
+  const { data, error } = await supabase
+    .from("packages")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
+  if (error) throw error;
+  return data ? rowToPackage(data) : undefined;
 }
 
 /** @returns {Promise<import('../domain/models/Package.js').Package[]>} */
 export async function getPackagesByCategory(category) {
-  const db = await getDB();
-  return db.getAllFromIndex(STORE.PACKAGES, "by_category", category);
+  const { data, error } = await supabase
+    .from("packages")
+    .select("*")
+    .eq("category", category);
+  if (error) throw error;
+  return (data ?? []).map(rowToPackage);
 }
 
 /**
@@ -46,10 +54,9 @@ export async function getPackagesByCategory(category) {
  * @returns {Promise<import('../domain/models/Package.js').Package>}
  */
 export async function addPackage(input) {
-  const db = await getDB();
   const pkg = createPackage(input);
-  await db.add(STORE.PACKAGES, pkg);
-  schedulePackagePush(pkg);
+  const { error } = await supabase.from("packages").insert(packageToRow(pkg));
+  if (error) throw error;
   return pkg;
 }
 
@@ -63,8 +70,7 @@ export async function addPackage(input) {
  * @returns {Promise<import('../domain/models/Package.js').Package>}
  */
 export async function updatePackage(id, changes) {
-  const db = await getDB();
-  const existing = await db.get(STORE.PACKAGES, id);
+  const existing = await getPackageById(id);
   if (!existing) {
     throw new Error(`Package not found: ${id}`);
   }
@@ -74,64 +80,75 @@ export async function updatePackage(id, changes) {
     id, // never allow id to change
     updatedAt: new Date().toISOString(),
   };
-  await db.put(STORE.PACKAGES, updated);
-  schedulePackagePush(updated);
+  const { error } = await supabase
+    .from("packages")
+    .update(packageToRow(updated))
+    .eq("id", id);
+  if (error) throw error;
   return updated;
 }
 
 /** @param {string} id */
 export async function deletePackage(id) {
-  cancelPush(`package:${id}`);
-  const db = await getDB();
-  await db.delete(STORE.PACKAGES, id);
-  deletePackageRemote(id).catch((err) =>
-    console.warn(
-      `[amh-billing] Supabase delete failed for package:${id}:`,
-      err,
-    ),
-  );
+  const { error } = await supabase.from("packages").delete().eq("id", id);
+  if (error) throw error;
 }
 
 /**
- * Bulk-inserts packages, but ONLY if the store is completely empty. Used by
- * the seed script on first run — safe to call repeatedly (including
- * concurrently, e.g. React StrictMode's double-invoked effects in
- * development) without duplicating data, since every call after the store
- * has anything in it at all is a no-op.
+ * Seeds the default package list, but ONLY if the table is completely
+ * empty — checked with a real database query (`count`), not a
+ * name-matching heuristic. Safe to call on every app load: once anything
+ * at all exists in the table, every subsequent call is a no-op.
  *
- * IMPORTANT — this used to check "does a package with this name already
- * exist" per-input rather than "is the store empty at all", which was a
- * real bug: this function runs on every single app load (see App.jsx), and
- * a *rename* changes a package's name — so on the next load, the seed
- * list's original name (e.g. "Disposable Glass") no longer matched
- * anything by name (the row now says "Glass"), and got silently
- * re-inserted as a brand-new package with a new id, alongside the
- * still-present renamed one. Any edited field, not just name, could
- * trigger this depending on what the "already exists" check was
- * comparing — the actual fix is comparing against "does the store have
- * ANY packages", which a rename/edit never changes.
- *
- * The "single atomic transaction" reasoning below still applies and is
- * unchanged — only what's being checked changed.
+ * (An earlier IndexedDB-based version of this function checked "does a
+ * package with this name already exist" instead of "is the table empty
+ * at all" — that was a real bug: renaming a package changed its name, so
+ * on the next load the seed list's original name no longer matched
+ * anything, and got silently re-inserted as a brand-new duplicate
+ * alongside the renamed one. Checking against "does anything exist at
+ * all" avoids that class of bug entirely, since a rename/edit never
+ * makes a non-empty table look empty.)
  *
  * @param {Partial<import('../domain/models/Package.js').Package>[]} inputs
  */
 export async function seedPackagesIfEmpty(inputs) {
-  const db = await getDB();
-  const tx = db.transaction(STORE.PACKAGES, "readwrite");
-
-  const existingCount = await tx.store.count();
-  if (existingCount > 0) {
-    await tx.done;
-    return;
-  }
+  const { count, error: countError } = await supabase
+    .from("packages")
+    .select("*", { count: "exact", head: true });
+  if (countError) throw countError;
+  if (count > 0) return;
 
   const created = inputs.map((input) => createPackage(input));
+  const { error } = await supabase
+    .from("packages")
+    .insert(created.map(packageToRow));
+  if (error) throw error;
+}
 
-  await Promise.all([...created.map((pkg) => tx.store.add(pkg)), tx.done]);
+/**
+ * Subscribes to live Package changes (insert/update/delete) via Supabase
+ * Realtime — see this project's own decision for "row-level live sync,
+ * not keystroke-level": when any device saves a Package change, every
+ * other open device's picker/editor updates automatically, without a
+ * manual refresh. Returns an unsubscribe function; callers (see
+ * hooks/usePackages.js) must call it on unmount to avoid leaking the
+ * subscription.
+ *
+ * @param {() => void} onChange Called (with no arguments — callers just
+ *   re-fetch, see usePackages.js) whenever any row in `packages` changes.
+ * @returns {() => void} unsubscribe
+ */
+export function subscribeToPackages(onChange) {
+  const channel = supabase
+    .channel("packages-changes")
+    .on(
+      "postgres_changes",
+      { event: "*", schema: "public", table: "packages" },
+      onChange,
+    )
+    .subscribe();
 
-  // Pushed after the transaction commits (not inside it) — schedulePush's
-  // debounce timers/network calls have no business being part of an
-  // IndexedDB transaction's atomicity.
-  created.forEach(schedulePackagePush);
+  return () => {
+    supabase.removeChannel(channel);
+  };
 }
