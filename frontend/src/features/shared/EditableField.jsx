@@ -15,7 +15,7 @@ import styles from "./EditableField.module.css";
  * Auto-save is debounced: `onChange` (typically wired to `updateDraftPage`)
  * fires 500ms after the user stops typing, not per keystroke — see
  * useDebouncedCallback. Local `value` state updates immediately so typing
- * never feels laggy; only the IndexedDB write is delayed.
+ * never feels laggy; only the Supabase write is delayed.
  *
  * Always fills its container (`width: 100%` on both the wrapper span and
  * the input itself) rather than sizing to browser-default input width —
@@ -70,6 +70,17 @@ import styles from "./EditableField.module.css";
  *   formatDisplay?: (value: string|number) => string,
  * }} props
  */
+/**
+ * Caps how many suggestions the dropdown shows at once — see this
+ * project's own decision: an unbounded list flooded the dropdown with
+ * every historical fragment matching the current input (a real bug found
+ * in production, made worse before recording moved to on-blur-only, see
+ * handleBlur's own doc comment). Six is enough to be genuinely useful
+ * (the most recent/relevant matches) without turning into a full scroll
+ * of every partial match ever recorded.
+ */
+const MAX_SUGGESTIONS = 6;
+
 export default function EditableField({
   value,
   onChange,
@@ -85,7 +96,6 @@ export default function EditableField({
   const [dropdownPosition, setDropdownPosition] = useState(null);
   const debouncedSave = useDebouncedCallback((v) => {
     onChange(v);
-    if (autocompleteField) record(v);
   }, 500);
   const { history, record } = useFieldHistory(
     autocompleteField ?? "__unused__",
@@ -156,6 +166,38 @@ export default function EditableField({
     }
   }
 
+  /**
+   * Records the field's value into history on blur — i.e. once the user
+   * has actually finished editing this field, not on every intermediate
+   * debounced auto-save while they're still typing.
+   *
+   * This fixes a real data-quality bug found in production: recording on
+   * every debounced save (the previous behavior) meant a slow typist
+   * produced a separate history entry for every ~500ms pause mid-word —
+   * "M", "Mo", "Mol", "Mola", "Molani" all got recorded as if they were
+   * five different real values, flooding the autocomplete dropdown with
+   * fragments no one would ever want to pick. Blur is the only point that
+   * actually means "the user is done with this field" — recording there
+   * gives one clean entry per real edit instead of one per pause.
+   *
+   * Also calls `onChange(localValue)` directly here — not just `record`.
+   * useDebouncedCallback's own unmount cleanup only *cancels* a pending
+   * timer (see that hook's own effect), it does not flush/run it. Without
+   * this direct call, blurring within the 500ms debounce window (e.g. a
+   * quick tab-to-next-field) would silently cancel the pending save with
+   * nothing taking its place — the last few keystrokes would never
+   * actually persist. Calling `onChange` again here is harmless even when
+   * the debounced save already fired moments earlier (same value, an
+   * idempotent no-op write), so there's no need to track whether it did.
+   */
+  function handleBlur() {
+    setIsFocused(false);
+    onChange(localValue);
+    if (autocompleteField) {
+      record(localValue);
+    }
+  }
+
   function handlePickSuggestion(suggestion) {
     setLocalValue(suggestion);
     onChange(suggestion);
@@ -164,11 +206,13 @@ export default function EditableField({
   }
 
   const filteredSuggestions = autocompleteField
-    ? history.filter(
-        (v) =>
-          v.toLowerCase().includes(String(localValue).toLowerCase()) &&
-          v !== localValue,
-      )
+    ? history
+        .filter(
+          (v) =>
+            v.toLowerCase().includes(String(localValue).toLowerCase()) &&
+            v !== localValue,
+        )
+        .slice(0, MAX_SUGGESTIONS)
     : [];
 
   const showDropdown =
@@ -194,6 +238,7 @@ export default function EditableField({
         placeholder={placeholder}
         onChange={handleChange}
         onFocus={handleFocus}
+        onBlur={handleBlur}
       />
       {showDropdown &&
         dropdownPosition &&
