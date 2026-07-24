@@ -57,16 +57,26 @@
   border-color: var(--chrome-accent);
 }
 
+.itemBlock {
+  margin-bottom: var(--space-sm);
+  padding-bottom: var(--space-sm);
+  border-bottom: 1px solid var(--chrome-border);
+}
+
+.itemBlock:last-of-type {
+  border-bottom: none;
+}
+
 .itemRow {
   display: flex;
   gap: var(--space-sm);
-  margin-bottom: var(--space-sm);
+  margin-bottom: 4px;
 }
 
 .itemInput {
   flex: 1;
   box-sizing: border-box;
-  font-family: var(--font-bengali);
+  font-family: var(--font-english);
   font-size: 0.85rem;
   padding: 6px var(--space-sm);
   border: 1px solid var(--chrome-border);
@@ -78,6 +88,23 @@
   border-color: var(--chrome-accent);
 }
 
+.itemInputBn {
+  width: 100%;
+  box-sizing: border-box;
+  font-family: var(--font-bengali);
+  font-size: 0.85rem;
+  padding: 6px var(--space-sm);
+  border: 1px solid var(--chrome-border);
+  border-radius: var(--radius-sm);
+  color: var(--chrome-text-muted);
+}
+
+.itemInputBn:focus {
+  outline: none;
+  border-color: var(--chrome-accent);
+  color: var(--chrome-text);
+}
+
 .removeItemButton {
   font-size: 0.85rem;
   color: #b3261e;
@@ -85,6 +112,7 @@
   border: 1px solid var(--chrome-border);
   border-radius: var(--radius-sm);
   width: 32px;
+  flex-shrink: 0;
   cursor: pointer;
 }
 
@@ -138,4 +166,9 @@
 
 .saveButton:hover {
   background: var(--chrome-accent-hover);
+}
+
+.saveButton:disabled {
+  background: var(--chrome-text-muted);
+  cursor: not-allowed;
 }

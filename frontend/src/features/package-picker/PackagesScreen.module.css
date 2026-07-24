@@ -1,13 +1,17 @@
 .screen {
   padding: var(--space-xl) var(--space-lg);
-  max-width: 720px;
+  max-width: 860px;
   margin: 0 auto;
+}
+
+.headerRow {
+  margin-bottom: var(--space-lg);
 }
 
 .heading {
   font-family: var(--font-bengali);
-  font-size: 1.1rem;
-  font-weight: 600;
+  font-size: 1.25rem;
+  font-weight: 700;
   color: var(--chrome-text);
   margin: 0 0 var(--space-xs) 0;
 }
@@ -16,82 +20,162 @@
   font-family: var(--font-bengali);
   font-size: 0.85rem;
   color: var(--chrome-text-muted);
-  margin: 0 0 var(--space-lg) 0;
+  margin: 0;
 }
 
-.categoryGroup {
+/* --- Tab strip ------------------------------------------------------- */
+
+.tabStrip {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  border-bottom: 1px solid var(--chrome-border);
   margin-bottom: var(--space-lg);
 }
 
-.categoryLabel {
-  font-family: var(--font-bengali);
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: var(--chrome-text-muted);
-  margin: 0 0 var(--space-sm) 0;
-}
-
-.packageList {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.packageRow {
+.tab {
+  flex-shrink: 0;
   display: flex;
   align-items: center;
-  gap: var(--space-md);
-  background: #ffffff;
-  border: 1px solid var(--chrome-border);
-  border-radius: var(--radius-sm);
-  padding: var(--space-sm) var(--space-md);
+  gap: 6px;
   font-family: var(--font-bengali);
-}
-
-.packageName {
-  flex: 1;
-  font-size: 0.9rem;
-  color: var(--chrome-text);
-}
-
-.packageRate {
-  font-size: 0.85rem;
+  font-size: 0.88rem;
   color: var(--chrome-text-muted);
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  padding: var(--space-sm) var(--space-md);
+  cursor: pointer;
   white-space: nowrap;
 }
 
-.packageActions {
-  display: flex;
-  gap: 6px;
-  flex-shrink: 0;
+.tab:hover {
+  color: var(--chrome-text);
 }
 
-.editButton {
-  font-family: var(--font-bengali);
-  font-size: 0.78rem;
+.tabActive {
   color: var(--chrome-accent);
+  border-bottom-color: var(--chrome-accent);
+  font-weight: 600;
+}
+
+.tabCount {
+  font-family: var(--font-ui);
+  font-size: 0.7rem;
+  color: inherit;
+  opacity: 0.65;
+  background: var(--chrome-bg);
+  border-radius: 999px;
+  padding: 1px 7px;
+}
+
+.addTabButton {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  margin-left: 2px;
+  font-size: 1.1rem;
+  color: var(--chrome-text-muted);
   background: none;
-  border: 1px solid var(--chrome-border);
-  border-radius: var(--radius-sm);
-  padding: 4px var(--space-sm);
+  border: 1px dashed var(--chrome-border);
+  border-radius: 50%;
   cursor: pointer;
 }
 
-.editButton:hover {
+.addTabButton:hover {
   border-color: var(--chrome-accent);
+  color: var(--chrome-accent);
 }
 
-.deleteButton {
+/* --- Pane header (add/delete actions for the active tab) -------------- */
+
+.paneHeader {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-md);
+}
+
+.deleteCategoryButton {
   font-family: var(--font-bengali);
-  font-size: 0.78rem;
+  font-size: 0.8rem;
   color: #b3261e;
   background: none;
   border: 1px solid var(--chrome-border);
   border-radius: var(--radius-sm);
-  padding: 4px var(--space-sm);
+  padding: 6px var(--space-md);
   cursor: pointer;
 }
 
-.deleteButton:hover {
+.deleteCategoryButton:hover {
   border-color: #b3261e;
+}
+
+.addPackageButton {
+  font-family: var(--font-bengali);
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #ffffff;
+  background: var(--chrome-accent);
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 6px var(--space-md);
+  cursor: pointer;
+}
+
+.addPackageButton:hover {
+  background: var(--chrome-accent-hover);
+}
+
+/* --- Package card grid -------------------------------------------------- */
+
+.cardGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: var(--space-sm);
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  text-align: left;
+  background: #ffffff;
+  border: 1px solid var(--chrome-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-md);
+  font-family: var(--font-bengali);
+  cursor: pointer;
+}
+
+.card:hover {
+  border-color: var(--chrome-accent);
+  box-shadow: 0 2px 8px rgba(40, 90, 160, 0.08);
+}
+
+.cardName {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--chrome-text);
+}
+
+.cardMeta {
+  font-family: var(--font-ui);
+  font-size: 0.78rem;
+  color: var(--chrome-text-muted);
+}
+
+.emptyState {
+  grid-column: 1 / -1;
+  font-family: var(--font-bengali);
+  font-size: 0.85rem;
+  color: var(--chrome-text-muted);
+  text-align: center;
+  padding: var(--space-xl) 0;
 }

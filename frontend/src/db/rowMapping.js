@@ -28,7 +28,7 @@ export function packageToRow(pkg) {
   return {
     id: pkg.id,
     name: pkg.name,
-    category: pkg.category,
+    category_id: pkg.categoryId,
     items: pkg.items,
     rate: pkg.rate,
     seasonal: pkg.seasonal,
@@ -42,10 +42,32 @@ export function rowToPackage(row) {
   return {
     id: row.id,
     name: row.name,
-    category: row.category,
+    categoryId: row.category_id,
     items: row.items ?? [],
     rate: row.rate,
     seasonal: row.seasonal,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+/** @param {import('../domain/models/Category.js').Category} category */
+export function categoryToRow(category) {
+  return {
+    id: category.id,
+    name: category.name,
+    display_order: category.displayOrder,
+    created_at: category.createdAt,
+    updated_at: category.updatedAt,
+  };
+}
+
+/** @returns {import('../domain/models/Category.js').Category} */
+export function rowToCategory(row) {
+  return {
+    id: row.id,
+    name: row.name,
+    displayOrder: row.display_order,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };

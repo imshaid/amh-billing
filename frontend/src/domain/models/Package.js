@@ -16,7 +16,14 @@
  * @typedef {Object} Package
  * @property {string} id
  * @property {string} name
- * @property {"Snacks"|"Lunch"|"Iftar"|null} category
+ * @property {string|null} categoryId  References Category.id (see
+ *   domain/models/Category.js) — categories are now a real, user-managed
+ *   table rather than a fixed Snacks/Lunch/Iftar/null enum (see this
+ *   project's own decision to support fully dynamic categories). `null`
+ *   is no longer a meaningful value for new Packages — every Package
+ *   should have a real categoryId once the "সাধারণ" (Normal/à la carte)
+ *   category exists as a real row too — but is tolerated for any
+ *   Package that predates this migration and hasn't been re-saved yet.
  * @property {PackageItem[]} items
  * @property {number|null} rate
  * @property {"ramadan"|null} seasonal
@@ -36,7 +43,7 @@ export function createPackage(input) {
   return {
     id: input.id ?? crypto.randomUUID(),
     name: input.name ?? "",
-    category: input.category ?? null,
+    categoryId: input.categoryId ?? null,
     items: input.items ?? [],
     rate: input.rate ?? null,
     seasonal: input.seasonal ?? null,

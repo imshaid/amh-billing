@@ -42,8 +42,8 @@ export default function PackagePickerPopup({
   const [query, setQuery] = useState("");
 
   const filteredGroups = groupedPackages
-    .map(({ category, label, packages }) => ({
-      category,
+    .map(({ categoryId, label, packages }) => ({
+      categoryId,
       label,
       packages: query.trim()
         ? packages.filter((pkg) =>
@@ -76,8 +76,11 @@ export default function PackagePickerPopup({
         )}
 
         {status === "ready" &&
-          filteredGroups.map(({ category, label, packages }) => (
-            <div key={category} className={styles.categoryGroup}>
+          filteredGroups.map(({ categoryId, label, packages }) => (
+            <div
+              key={categoryId ?? "uncategorized"}
+              className={styles.categoryGroup}
+            >
               <p className={styles.categoryLabel}>{label}</p>
               <div className={styles.chipGrid}>
                 {packages.map((pkg) => (

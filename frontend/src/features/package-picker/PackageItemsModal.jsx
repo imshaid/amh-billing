@@ -2,20 +2,24 @@ import styles from "./PackageItemsModal.module.css";
 
 /**
  * Shows one Package's full item list in both Bangla and English — opened
- * by clicking the info icon on a PackageChip (see PackageChip.jsx). This
- * is purely a read-only reference view for the person browsing the
- * picker; it has no bearing on what actually gets printed on the Bill/
- * Invoice/PDF, which continues to use each item's `text` (English) only —
- * see this project's own decision and domain/models/Package.js's doc
- * comment on `textBn`.
+ * either by clicking the info icon on a PackageChip (see PackageChip.jsx,
+ * inside the package picker) or by clicking a package row on
+ * PackagesScreen. In the picker, this is a pure read-only reference view
+ * — `onEdit`/`onDelete` are omitted there, so those buttons don't render.
+ * On PackagesScreen, both are supplied, turning this into the same
+ * "view details, then act" modal used for management. Either way, this
+ * has no bearing on what actually gets printed on the Bill/Invoice/PDF,
+ * which continues to use each item's `text` (English) only — see this
+ * project's own decision and domain/models/Package.js's doc comment on
+ * `textBn`.
  *
- * Renders as its own overlay layered on top of PackagePickerPopup's
- * overlay (see .module.css's z-index) rather than replacing it — closing
- * this modal (via its own close button, backdrop click, or picking a
- * different item) should land the person back on the still-open package
- * picker, not dismiss the whole picker. `stopPropagation` on the inner
- * click keeps a click inside this modal from bubbling up and triggering
- * PackagePickerPopup's own backdrop-click-to-close handler.
+ * Renders as its own overlay layered on top of whatever opened it (see
+ * .module.css's z-index) rather than replacing it — closing this modal
+ * (via its own close button, backdrop click, or picking a different
+ * item) should land the person back on the still-open picker/screen, not
+ * dismiss it. `stopPropagation` on the inner click keeps a click inside
+ * this modal from bubbling up and triggering the parent's own
+ * backdrop-click-to-close handler.
  *
  * `textBn` is optional per item (older/edited Packages may not have a
  * Bangla translation yet — see domain/models/Package.js) — falls back to
@@ -25,15 +29,31 @@ import styles from "./PackageItemsModal.module.css";
  *
  * @param {{
  *   pkg: import('../../domain/models/Package.js').Package,
+ *   categoryLabel?: string,
  *   onClose: () => void,
+ *   onEdit?: () => void,
+ *   onDelete?: () => void,
  * }} props
  */
-export default function PackageItemsModal({ pkg, onClose }) {
+export default function PackageItemsModal({
+  pkg,
+  categoryLabel,
+  onClose,
+  onEdit,
+  onDelete,
+}) {
   return (
     <div className={styles.overlay} onClick={onClose}>
       <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
         <div className={styles.header}>
-          <p className={styles.heading}>{pkg.name}</p>
+          <div>
+            <p className={styles.heading}>{pkg.name}</p>
+            <p className={styles.metaLine}>
+              {categoryLabel && <span>{categoryLabel}</span>}
+              {categoryLabel && pkg.rate != null && <span> · </span>}
+              {pkg.rate != null && <span>৳{pkg.rate}</span>}
+            </p>
+          </div>
           <button
             type="button"
             className={styles.closeIconButton}
@@ -56,6 +76,29 @@ export default function PackageItemsModal({ pkg, onClose }) {
             </li>
           ))}
         </ul>
+
+        {(onEdit || onDelete) && (
+          <div className={styles.actionRow}>
+            {onEdit && (
+              <button
+                type="button"
+                className={styles.editButton}
+                onClick={onEdit}
+              >
+                এডিট
+              </button>
+            )}
+            {onDelete && (
+              <button
+                type="button"
+                className={styles.deleteButton}
+                onClick={onDelete}
+              >
+                ডিলিট
+              </button>
+            )}
+          </div>
+        )}
 
         <button className={styles.closeButton} onClick={onClose}>
           বন্ধ করুন
