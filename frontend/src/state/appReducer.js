@@ -2,20 +2,24 @@
  * Pure reducer for App-level UI state — NOT persisted data. This only tracks
  * "what is the user currently looking at" (which top-level screen, which Set
  * is open, which Page is highlighted in the canvas). The actual Set/Page/
- * Package records themselves live in IndexedDB and are loaded via the hooks
+ * Package records themselves live in Supabase and are loaded via the hooks
  * in `src/hooks/` — this reducer never holds a copy of that data, only ids
  * and view-mode flags, so there is exactly one source of truth for each
  * kind of thing.
  */
 
 /**
- * @typedef {"landing"|"workspace"|"previousSessions"|"packages"|"analytics"} View
+ * @typedef {"landing"|"workspace"|"previousSessions"|"packages"} View
  * "workspace" is the single-session continuous-scroll canvas (see
  * WorkspaceView.jsx) — there is no Set-switching UI inside it; switching
  * Sets means returning to "landing" and picking again from "আগের
- * সেশনসমূহ" (previousSessions). The other two screens (packages, analytics)
- * are the remaining grid cards on the landing page. "landing" itself has no
- * card — it's the home screen the global top bar's title returns to.
+ * সেশনসমূহ" (previousSessions). "packages" is the remaining grid card on
+ * the landing page. "landing" itself has no card — it's the home screen
+ * the global top bar's title returns to, and per this project's own
+ * decision now doubles as the business dashboard (stats, income/category/
+ * buyer/person charts, daily order detail, recent sessions) — there is no
+ * separate "analytics" view anymore; that content lives directly on
+ * "landing" (see features/landing/LandingPage.jsx).
  */
 
 /**

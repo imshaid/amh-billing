@@ -203,3 +203,28 @@ export function subscribeToPagesBySet(setId, onChange) {
     supabase.removeChannel(channel);
   };
 }
+
+/**
+ * Unfiltered variant of subscribeToPagesBySet — every Page change across
+ * every Set, not scoped to one. Used by hooks/useDashboardData.js, which
+ * (unlike the single-Set workspace view) genuinely needs to know about a
+ * Bill/Invoice edit anywhere, since dashboard stats/charts aggregate
+ * across every Set at once.
+ *
+ * @param {() => void} onChange
+ * @returns {() => void} unsubscribe
+ */
+export function subscribeToAllPages(onChange) {
+  const channel = supabase
+    .channel(`all-pages-changes-${crypto.randomUUID()}`)
+    .on(
+      "postgres_changes",
+      { event: "*", schema: "public", table: "pages" },
+      onChange,
+    )
+    .subscribe();
+
+  return () => {
+    supabase.removeChannel(channel);
+  };
+}

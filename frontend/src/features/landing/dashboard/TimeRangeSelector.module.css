@@ -1,0 +1,30 @@
+.selector {
+  display: inline-flex;
+  gap: 2px;
+  background: var(--chrome-bg);
+  border: 1px solid var(--chrome-border);
+  border-radius: var(--radius-sm);
+  padding: 3px;
+}
+
+.option {
+  font-family: var(--font-bengali);
+  font-size: 0.78rem;
+  color: var(--chrome-text-muted);
+  background: none;
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 5px var(--space-sm);
+  cursor: pointer;
+}
+
+.option:hover {
+  color: var(--chrome-text);
+}
+
+.optionActive {
+  background: #ffffff;
+  color: var(--chrome-accent);
+  font-weight: 600;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+}

@@ -9,12 +9,11 @@ import WorkspaceView from "./WorkspaceView.jsx";
 import LandingPage from "../../features/landing/LandingPage.jsx";
 import PreviousSessionsScreen from "../../features/session/PreviousSessionsScreen.jsx";
 import PackagesScreen from "../../features/package-picker/PackagesScreen.jsx";
-import AnalyticsScreen from "../../features/analytics/AnalyticsScreen.jsx";
 import PdfDownloadModal from "../../features/shared/PdfDownloadModal.jsx";
 import styles from "./AppRouter.module.css";
 
 /**
- * Top-level view router, mounted once IndexedDB bootstrap succeeds (see
+ * Top-level view router, mounted once Supabase bootstrap succeeds (see
  * App.jsx). GlobalTopBar renders once here, above whichever view is active,
  * so it stays persistent across every screen — including the Home button
  * that always returns to "landing" (see appReducer.js's GO_HOME action).
@@ -102,7 +101,7 @@ export default function AppRouter() {
         <PdfDownloadModal
           // sortPagesForDisplay (the same canonical বিল → চালান → সামারি
           // order CanvasArea itself renders pages in) rather than the raw
-          // `pages` from usePages — that raw order reflects IndexedDB
+          // `pages` from usePages — that raw order reflects Supabase
           // storage/creation order, not display order, which is exactly
           // what previously let a summary page end up ahead of its bill
           // in the generated PDF (see PdfDownloadModal.jsx's own doc
@@ -133,7 +132,6 @@ export default function AppRouter() {
         )}
         {state.currentView === "previousSessions" && <PreviousSessionsScreen />}
         {state.currentView === "packages" && <PackagesScreen />}
-        {state.currentView === "analytics" && <AnalyticsScreen />}
       </div>
     </div>
   );
