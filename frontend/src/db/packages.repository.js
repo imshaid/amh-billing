@@ -93,21 +93,26 @@ export async function deletePackage(id) {
 }
 
 /**
- * Bulk-inserts packages, skipping any that already exist by name. Used by the
- * seed script on first run — safe to call repeatedly (including concurrently,
- * e.g. React StrictMode's double-invoked effects in development) without
- * duplicating data.
+ * Bulk-inserts packages, but ONLY if the store is completely empty. Used by
+ * the seed script on first run — safe to call repeatedly (including
+ * concurrently, e.g. React StrictMode's double-invoked effects in
+ * development) without duplicating data, since every call after the store
+ * has anything in it at all is a no-op.
  *
- * IMPORTANT: the "read existing names" and "write missing ones" steps run
- * inside a *single* IndexedDB transaction. An earlier version read via
- * `db.getAll()` (its own auto-committing transaction) and then opened a
- * separate `readwrite` transaction to insert — that left a gap where two
- * overlapping calls (e.g. React StrictMode invoking the effect twice) could
- * both read "store is empty" before either had written anything, causing
- * every package to be inserted twice. Doing both steps on `tx.store` inside
- * one transaction closes that gap: IndexedDB transactions are atomic, so a
- * second overlapping call is queued behind the first one entirely, not
- * interleaved with it.
+ * IMPORTANT — this used to check "does a package with this name already
+ * exist" per-input rather than "is the store empty at all", which was a
+ * real bug: this function runs on every single app load (see App.jsx), and
+ * a *rename* changes a package's name — so on the next load, the seed
+ * list's original name (e.g. "Disposable Glass") no longer matched
+ * anything by name (the row now says "Glass"), and got silently
+ * re-inserted as a brand-new package with a new id, alongside the
+ * still-present renamed one. Any edited field, not just name, could
+ * trigger this depending on what the "already exists" check was
+ * comparing — the actual fix is comparing against "does the store have
+ * ANY packages", which a rename/edit never changes.
+ *
+ * The "single atomic transaction" reasoning below still applies and is
+ * unchanged — only what's being checked changed.
  *
  * @param {Partial<import('../domain/models/Package.js').Package>[]} inputs
  */
@@ -115,10 +120,13 @@ export async function seedPackagesIfEmpty(inputs) {
   const db = await getDB();
   const tx = db.transaction(STORE.PACKAGES, "readwrite");
 
-  const existing = await tx.store.getAll();
-  const existingNames = new Set(existing.map((pkg) => pkg.name));
-  const toInsert = inputs.filter((input) => !existingNames.has(input.name));
-  const created = toInsert.map((input) => createPackage(input));
+  const existingCount = await tx.store.count();
+  if (existingCount > 0) {
+    await tx.done;
+    return;
+  }
+
+  const created = inputs.map((input) => createPackage(input));
 
   await Promise.all([...created.map((pkg) => tx.store.add(pkg)), tx.done]);
 
