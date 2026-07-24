@@ -31,6 +31,7 @@ import { buildDashboardRows } from "../domain/aggregation/dashboardCalculator.js
  *
  * @returns {{
  *   rows: import('../domain/aggregation/dashboardCalculator.js').DashboardRow[],
+ *   pagesBySetId: Map<string, import('../domain/models/Page.js').Page[]>,
  *   packagesById: Map<string, import('../domain/models/Package.js').Package>,
  *   categoriesById: Map<string, import('../domain/models/Category.js').Category>,
  *   status: "loading"|"ready"|"error",
@@ -40,6 +41,7 @@ import { buildDashboardRows } from "../domain/aggregation/dashboardCalculator.js
  */
 export function useDashboardData() {
   const [rows, setRows] = useState([]);
+  const [pagesBySetId, setPagesBySetId] = useState(new Map());
   const [packagesById, setPackagesById] = useState(new Map());
   const [categoriesById, setCategoriesById] = useState(new Map());
   const [status, setStatus] = useState("loading");
@@ -53,13 +55,14 @@ export function useDashboardData() {
         getAllCategories(),
       ]);
 
-      const pagesBySetId = new Map(
+      const pagesMap = new Map(
         await Promise.all(
           sets.map(async (set) => [set.id, await getPagesBySet(set.id)]),
         ),
       );
 
-      setRows(buildDashboardRows(sets, pagesBySetId));
+      setRows(buildDashboardRows(sets, pagesMap));
+      setPagesBySetId(pagesMap);
       setPackagesById(new Map(packages.map((p) => [p.id, p])));
       setCategoriesById(new Map(categories.map((c) => [c.id, c])));
       setStatus("ready");
@@ -84,5 +87,13 @@ export function useDashboardData() {
     };
   }, [refresh]);
 
-  return { rows, packagesById, categoriesById, status, error, refresh };
+  return {
+    rows,
+    pagesBySetId,
+    packagesById,
+    categoriesById,
+    status,
+    error,
+    refresh,
+  };
 }

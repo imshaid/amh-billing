@@ -1,107 +1,108 @@
 import { useMemo, useState } from "react";
 import { useAppState } from "../../state/useAppState.js";
-import { useSets } from "../../hooks/useSets.js";
 import { useOrderedByPersons } from "../../hooks/useOrderedByPersons.js";
+import { useSets } from "../../hooks/useSets.js";
 import { useDashboardData } from "../../hooks/useDashboardData.js";
 import {
-  filterRowsByRange,
+  filterRowsByMonth,
+  currentYearMonth,
   computeStats,
-  buildIncomeTrend,
+  computeUniqueBuyers,
+  computeUniqueAddresses,
   buildCategoryBreakdown,
   buildTopPackages,
-  buildBuyerBreakdown,
   buildOrderedByPersonBreakdown,
+  buildYearlyOrderRevenueTrend,
   buildDailyOrderDetail,
 } from "../../domain/aggregation/dashboardCalculator.js";
 import NewSessionModal from "./NewSessionModal.jsx";
-import KpiCard from "./dashboard/KpiCard.jsx";
-import TimeRangeSelector from "./dashboard/TimeRangeSelector.jsx";
-import IncomeTrendChart from "./dashboard/IncomeTrendChart.jsx";
+import PackagesScreen from "../package-picker/PackagesScreen.jsx";
+import PreviousSessionsScreen from "../session/PreviousSessionsScreen.jsx";
+import MonthYearNavigator from "./dashboard/MonthYearNavigator.jsx";
+import SegmentedCategoryBar from "./dashboard/SegmentedCategoryBar.jsx";
 import DonutChart from "./dashboard/DonutChart.jsx";
-import BreakdownBarChart from "./dashboard/BreakdownBarChart.jsx";
+import YearlyOrderRevenueChart from "./dashboard/YearlyOrderRevenueChart.jsx";
 import DailyOrderDetail from "./dashboard/DailyOrderDetail.jsx";
+import NamedListModal from "./dashboard/NamedListModal.jsx";
+import ScreenPopup from "./dashboard/ScreenPopup.jsx";
 import styles from "./LandingPage.module.css";
 
-/** Today as "YYYY-MM-DD" in local time (not UTC — see toDateOnly's own
- * callers in dashboardCalculator.js, which all key off local calendar
- * days, not UTC-shifted ones). */
+/** Today as "YYYY-MM-DD" local time — see dashboardCalculator.js's
+ * toDateOnly's own callers, all local-calendar-day-keyed, not UTC. */
 function todayIso() {
   const d = new Date();
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
 /**
- * Home screen — a real, dense business dashboard (see this project's own
- * decision, researched against actual hotel/admin dashboard UI
- * conventions rather than guessed at) built to fit entirely within one
- * viewport on large screens, no scrolling — see LandingPage.module.css's
- * grid, and AppRouter.jsx's own decision to give this view the same
- * no-scroll container WorkspaceView uses. On narrow screens the same
- * grid collapses to a scrollable single column (see the media query in
- * LandingPage.module.css) — a non-scrollable *requirement* only applies
- * to desktop-sized viewports; a phone genuinely cannot show this much at
- * once without scrolling, and forcing it to would just make everything
- * illegibly small instead.
+ * Home screen — a business dashboard built directly from this project's
+ * own wireframe (see the two independent date navigators, the specific
+ * widget shapes, and the click-to-popup KPI cards, all per that
+ * wireframe rather than a generic "reference dashboard" guess).
  *
- * "নতুন সেশন"/"আগের সেশনসমূহ"/"প্যাকেজ" are no longer a separate row of
- * FeatureCards below the dashboard — per this project's own decision,
- * they're folded directly into the grid (see the `.quickActionCard`
- * cells) so the whole screen reads as one cohesive dashboard rather than
- * "charts, then also a separate app-launcher section."
+ * Two INDEPENDENT date navigators, per this project's own decision:
+ *   1. `monthYear` (top-right MonthYearNavigator) drives every card
+ *      EXCEPT the Yearly Order/Revenue chart and the Daily Order Table.
+ *   2. `dailyOrderDate` (inside DailyOrderDetail, using the existing
+ *      DateField calendar) drives ONLY that table.
+ *   The Yearly chart has its own separate `chartYear` state (a plain
+ *   number, not wired to either navigator above) since it always shows
+ *   all 12 months of whichever year it's set to.
  *
- * There is no more separate "Analytics" screen/card — that content lives
- * directly here now (see AppRouter.jsx's own decision to drop the
- * "analytics" view entirely).
- *
- * One shared `timeRange` (see TimeRangeSelector) drives every chart at
- * once; the KPI cards and the daily order detail are each independent of
- * it (see computeStats' own doc comment on why "today"/"this month" stay
- * fixed, and DailyOrderDetail's own date picker for why a specific day is
- * its own separate concern from a range).
+ * "Total Buyers"/"Total Addresses"/"Total Packages"/"Total Sessions" are
+ * all clickable (see this project's own decision): buyers/addresses open
+ * a NamedListModal with the full list; packages/sessions open the actual
+ * PackagesScreen/PreviousSessionsScreen as a popup (see ScreenPopup) —
+ * reusing those screens' own components rather than building separate
+ * summary views. PreviousSessionsScreen also has its own "নতুন সেশন"
+ * button now (see that component's own doc comment) for exactly this
+ * popup context.
  */
 export default function LandingPage() {
   const { dispatch } = useAppState();
   const { sets, createSet } = useSets();
   const previousPersons = useOrderedByPersons(sets);
   const [isNewSessionModalOpen, setIsNewSessionModalOpen] = useState(false);
-  const [timeRange, setTimeRange] = useState("30d");
-  const [selectedDate, setSelectedDate] = useState(todayIso());
 
-  const { rows, packagesById, categoriesById, status } = useDashboardData();
+  const [monthYear, setMonthYear] = useState(currentYearMonth());
+  const [chartYear, setChartYear] = useState(new Date().getFullYear());
+  const [dailyOrderDate, setDailyOrderDate] = useState(todayIso());
+
+  const [openPopup, setOpenPopup] = useState(null); // null | "buyers" | "addresses" | "packages" | "sessions"
+
+  const { rows, pagesBySetId, packagesById, categoriesById, status } =
+    useDashboardData();
+
+  const monthRows = useMemo(
+    () => filterRowsByMonth(rows, monthYear),
+    [rows, monthYear],
+  );
 
   const stats = useMemo(() => computeStats(rows), [rows]);
-
-  const filteredRows = useMemo(
-    () => filterRowsByRange(rows, timeRange),
-    [rows, timeRange],
+  const uniqueBuyers = useMemo(
+    () => computeUniqueBuyers(monthRows),
+    [monthRows],
   );
-
-  const incomeTrend = useMemo(
-    () => buildIncomeTrend(filteredRows, timeRange),
-    [filteredRows, timeRange],
+  const uniqueAddresses = useMemo(
+    () => computeUniqueAddresses(monthRows, pagesBySetId),
+    [monthRows, pagesBySetId],
   );
   const categoryBreakdown = useMemo(
-    () => buildCategoryBreakdown(filteredRows, packagesById, categoriesById),
-    [filteredRows, packagesById, categoriesById],
+    () => buildCategoryBreakdown(monthRows, packagesById, categoriesById),
+    [monthRows, packagesById, categoriesById],
   );
-  const topPackages = useMemo(
-    () => buildTopPackages(filteredRows),
-    [filteredRows],
-  );
-  const buyerBreakdown = useMemo(
-    () => buildBuyerBreakdown(filteredRows),
-    [filteredRows],
-  );
+  const topPackages = useMemo(() => buildTopPackages(monthRows), [monthRows]);
   const personBreakdown = useMemo(
-    () => buildOrderedByPersonBreakdown(filteredRows),
-    [filteredRows],
+    () => buildOrderedByPersonBreakdown(monthRows),
+    [monthRows],
+  );
+  const yearlyTrend = useMemo(
+    () => buildYearlyOrderRevenueTrend(rows, chartYear),
+    [rows, chartYear],
   );
   const dailyLines = useMemo(
-    () => buildDailyOrderDetail(rows, selectedDate),
-    [rows, selectedDate],
+    () => buildDailyOrderDetail(rows, dailyOrderDate),
+    [rows, dailyOrderDate],
   );
 
   async function handleConfirmNewSession({ purchaseDate, orderedByPerson }) {
@@ -124,31 +125,84 @@ export default function LandingPage() {
 
   return (
     <div className={styles.dashboard}>
-      <div className={styles.topRow}>
-        <KpiCard
-          icon="৳"
-          color="blue"
-          label="আজকের বিক্রয়"
-          value={`৳${stats.todaySales.toLocaleString("bn-BD")}`}
-          trendPct={stats.todayTrendPct}
-          trendLabel="গতকালের তুলনায়"
-        />
-        <KpiCard
-          icon="📈"
-          color="teal"
-          label="এই মাসের আয়"
-          value={`৳${stats.monthSales.toLocaleString("bn-BD")}`}
-          trendPct={stats.monthTrendPct}
-          trendLabel="গত মাসের তুলনায়"
-        />
-        <KpiCard
-          icon="📁"
-          color="purple"
-          label="মোট সেশন"
-          value={stats.totalSessions.toLocaleString("bn-BD")}
-          trendPct={null}
-          trendLabel="সর্বমোট"
-        />
+      <div className={styles.topSection}>
+        <div className={styles.kpiBlock}>
+          <button
+            type="button"
+            className={styles.kpiCard}
+            onClick={() => setOpenPopup("sessions")}
+          >
+            <p className={styles.kpiLabel}>মোট সেশন</p>
+            <p className={styles.kpiValue}>
+              {stats.totalSessions.toLocaleString("bn-BD")}
+            </p>
+          </button>
+          <button
+            type="button"
+            className={styles.kpiCard}
+            onClick={() => setOpenPopup("packages")}
+          >
+            <p className={styles.kpiLabel}>মোট প্যাকেজ</p>
+            <p className={styles.kpiValue}>
+              {packagesById.size.toLocaleString("bn-BD")}
+            </p>
+          </button>
+          <button
+            type="button"
+            className={styles.kpiCard}
+            onClick={() => setOpenPopup("buyers")}
+          >
+            <p className={styles.kpiLabel}>মোট ক্রেতা</p>
+            <p className={styles.kpiValue}>
+              {uniqueBuyers.length.toLocaleString("bn-BD")}
+            </p>
+          </button>
+          <button
+            type="button"
+            className={styles.kpiCard}
+            onClick={() => setOpenPopup("addresses")}
+          >
+            <p className={styles.kpiLabel}>মোট ঠিকানা</p>
+            <p className={styles.kpiValue}>
+              {uniqueAddresses.length.toLocaleString("bn-BD")}
+            </p>
+          </button>
+        </div>
+
+        <div className={`${styles.card} ${styles.categoriesCard}`}>
+          <div className={styles.cardHeaderRow}>
+            <p className={styles.cardTitle}>ক্যাটাগরি অনুযায়ী বিক্রয়</p>
+            <MonthYearNavigator yearMonth={monthYear} onChange={setMonthYear} />
+          </div>
+          <SegmentedCategoryBar data={categoryBreakdown} />
+        </div>
+      </div>
+
+      <div className={styles.summaryRow}>
+        <div className={styles.card}>
+          <p className={styles.cardTitle}>আজকের বিক্রয়</p>
+          <p className={styles.summaryValue}>
+            ৳{stats.todaySales.toLocaleString("bn-BD")}
+          </p>
+          <p className={styles.summaryTrend}>
+            {stats.todayTrendPct == null
+              ? "—"
+              : `${stats.todayTrendPct >= 0 ? "▲" : "▼"} ${Math.abs(stats.todayTrendPct).toFixed(1)}%`}{" "}
+            গতকালের তুলনায়
+          </p>
+        </div>
+        <div className={styles.card}>
+          <p className={styles.cardTitle}>এই মাসের আয়</p>
+          <p className={styles.summaryValue}>
+            ৳{stats.monthSales.toLocaleString("bn-BD")}
+          </p>
+          <p className={styles.summaryTrend}>
+            {stats.monthTrendPct == null
+              ? "—"
+              : `${stats.monthTrendPct >= 0 ? "▲" : "▼"} ${Math.abs(stats.monthTrendPct).toFixed(1)}%`}{" "}
+            গত মাসের তুলনায়
+          </p>
+        </div>
         <button
           type="button"
           className={styles.quickActionCard}
@@ -157,84 +211,52 @@ export default function LandingPage() {
           <span className={styles.quickActionIcon}>📄</span>
           <span className={styles.quickActionLabel}>নতুন সেশন</span>
         </button>
-        <button
-          type="button"
-          className={styles.quickActionCard}
-          onClick={() =>
-            dispatch({ type: "SET_VIEW", payload: "previousSessions" })
-          }
-        >
-          <span className={styles.quickActionIcon}>🕐</span>
-          <span className={styles.quickActionLabel}>আগের সেশনসমূহ</span>
-        </button>
-        <button
-          type="button"
-          className={styles.quickActionCard}
-          onClick={() => dispatch({ type: "SET_VIEW", payload: "packages" })}
-        >
-          <span className={styles.quickActionIcon}>📦</span>
-          <span className={styles.quickActionLabel}>প্যাকেজ</span>
-        </button>
-      </div>
-
-      <div className={styles.rangeRow}>
-        <TimeRangeSelector value={timeRange} onChange={setTimeRange} />
       </div>
 
       <div className={styles.mainGrid}>
-        <div className={`${styles.card} ${styles.incomeCard}`}>
-          <p className={styles.cardTitle}>
-            <span className={`${styles.titleDot} ${styles.dot_blue}`} />
-            আয়ের প্রবণতা
-          </p>
-          <div className={styles.chartBody}>
-            <IncomeTrendChart data={incomeTrend} />
+        <div className={`${styles.card} ${styles.yearlyCard}`}>
+          <div className={styles.cardHeaderRow}>
+            <p className={styles.cardTitle}>বার্ষিক অর্ডার ও আয়</p>
+            <div className={styles.yearNav}>
+              <button
+                type="button"
+                className={styles.yearNavButton}
+                onClick={() => setChartYear((y) => y - 1)}
+                aria-label="আগের বছর"
+              >
+                ‹
+              </button>
+              <span className={styles.yearLabel}>{chartYear}</span>
+              <button
+                type="button"
+                className={styles.yearNavButton}
+                onClick={() => setChartYear((y) => y + 1)}
+                aria-label="পরের বছর"
+              >
+                ›
+              </button>
+            </div>
           </div>
-        </div>
-
-        <div className={`${styles.card} ${styles.donutCard}`}>
-          <p className={styles.cardTitle}>
-            <span className={`${styles.titleDot} ${styles.dot_orange}`} />
-            ক্যাটাগরি অনুযায়ী বিক্রয়
-          </p>
-          <DonutChart data={categoryBreakdown} />
-        </div>
-
-        <div className={styles.card}>
-          <p className={styles.cardTitle}>
-            <span className={`${styles.titleDot} ${styles.dot_orange}`} />
-            জনপ্রিয় প্যাকেজ
-          </p>
           <div className={styles.chartBody}>
-            <BreakdownBarChart data={topPackages} />
-          </div>
-        </div>
-
-        <div className={styles.card}>
-          <p className={styles.cardTitle}>
-            <span className={`${styles.titleDot} ${styles.dot_purple}`} />
-            অর্ডারকারী ব্যক্তি
-          </p>
-          <div className={styles.chartBody}>
-            <BreakdownBarChart data={personBreakdown} />
+            <YearlyOrderRevenueChart data={yearlyTrend} />
           </div>
         </div>
 
         <div className={styles.card}>
-          <p className={styles.cardTitle}>
-            <span className={`${styles.titleDot} ${styles.dot_purple}`} />
-            ক্রেতা অনুযায়ী
-          </p>
-          <div className={styles.chartBody}>
-            <BreakdownBarChart data={buyerBreakdown} />
-          </div>
+          <p className={styles.cardTitle}>প্যাকেজ</p>
+          <DonutChart data={topPackages} centerLabel="মোট বিক্রয়" />
+        </div>
+
+        <div className={styles.card}>
+          <p className={styles.cardTitle}>অর্ডারকারী ব্যক্তি</p>
+          <DonutChart data={personBreakdown} centerLabel="মোট অর্ডার" />
         </div>
       </div>
 
       <div className={styles.bottomRow}>
         <DailyOrderDetail
-          selectedDate={selectedDate}
-          onDateChange={setSelectedDate}
+          selectedDate={dailyOrderDate}
+          onDateChange={setDailyOrderDate}
           lines={dailyLines}
         />
       </div>
@@ -245,6 +267,31 @@ export default function LandingPage() {
           onConfirm={handleConfirmNewSession}
           onCancel={() => setIsNewSessionModalOpen(false)}
         />
+      )}
+
+      {openPopup === "buyers" && (
+        <NamedListModal
+          title="ক্রেতার তালিকা"
+          entries={uniqueBuyers}
+          onClose={() => setOpenPopup(null)}
+        />
+      )}
+      {openPopup === "addresses" && (
+        <NamedListModal
+          title="ঠিকানার তালিকা"
+          entries={uniqueAddresses}
+          onClose={() => setOpenPopup(null)}
+        />
+      )}
+      {openPopup === "packages" && (
+        <ScreenPopup onClose={() => setOpenPopup(null)}>
+          <PackagesScreen />
+        </ScreenPopup>
+      )}
+      {openPopup === "sessions" && (
+        <ScreenPopup onClose={() => setOpenPopup(null)}>
+          <PreviousSessionsScreen />
+        </ScreenPopup>
       )}
     </div>
   );

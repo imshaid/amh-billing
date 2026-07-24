@@ -110,6 +110,42 @@ export function filterRowsByRange(rows, range) {
 }
 
 /**
+ * Filters rows down to exactly one calendar month — see this project's
+ * own decision for the dashboard's primary Month/Year navigator (top
+ * right, above the Categories card), which drives every card EXCEPT the
+ * Yearly Order/Revenue chart and the Daily Order Table (each of which has
+ * its own independent date control — see buildYearlyOrderRevenueTrend and
+ * buildDailyOrderDetail).
+ *
+ * @param {DashboardRow[]} rows
+ * @param {string} yearMonth "YYYY-MM"
+ * @returns {DashboardRow[]}
+ */
+export function filterRowsByMonth(rows, yearMonth) {
+  return rows.filter((row) => {
+    const dateOnly = toDateOnly(row.displayDate);
+    return dateOnly?.slice(0, 7) === yearMonth;
+  });
+}
+
+/** "YYYY-MM" for the current calendar month, local time. */
+export function currentYearMonth() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+
+/**
+ * @param {string} yearMonth "YYYY-MM"
+ * @param {number} deltaMonths
+ * @returns {string} "YYYY-MM"
+ */
+export function shiftYearMonth(yearMonth, deltaMonths) {
+  const [y, m] = yearMonth.split("-").map(Number);
+  const d = new Date(y, m - 1 + deltaMonths, 1);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+
+/**
  * @typedef {Object} DashboardStats
  * @property {number} todaySales
  * @property {number} yesterdaySales
@@ -178,6 +214,71 @@ function computeTrendPct(current, previous) {
 }
 
 /**
+ * @typedef {Object} NamedEntry
+ * @property {string} name
+ * @property {number} orderCount   How many Bill-page lineItem entries this name appears on.
+ * @property {number} totalAmount
+ */
+
+/**
+ * Unique buyers (by Bill page buyerName, same fallback chain as
+ * buildBuyerBreakdown) — feeds both the "Total Buyers" KPI card's count
+ * and its click-to-view popup list (see this project's own decision:
+ * clicking a KPI card opens a popup with the full list, not just a bare
+ * number).
+ *
+ * @param {DashboardRow[]} rows
+ * @returns {NamedEntry[]}
+ */
+export function computeUniqueBuyers(rows) {
+  const byName = new Map();
+  for (const row of rows) {
+    const name =
+      row.billPage?.buyerName || row.set.defaults?.buyerName || "অজানা";
+    const existing = byName.get(name) ?? {
+      name,
+      orderCount: 0,
+      totalAmount: 0,
+    };
+    existing.orderCount += 1;
+    existing.totalAmount += row.total;
+    byName.set(name, existing);
+  }
+  return [...byName.values()].sort((a, b) => b.totalAmount - a.totalAmount);
+}
+
+/**
+ * Unique addresses — sourced from each Set's Bill page `address` field
+ * (falling back to the first Invoice page's address, same idea as
+ * `displayDate`'s own fallback chain in buildDashboardRows, since a
+ * brand-new Set may not have a Bill page yet).
+ *
+ * @param {DashboardRow[]} rows
+ * @param {Map<string, import('../models/Page.js').Page[]>} pagesBySetId
+ * @returns {NamedEntry[]}
+ */
+export function computeUniqueAddresses(rows, pagesBySetId) {
+  const byAddress = new Map();
+  for (const row of rows) {
+    const pages = pagesBySetId.get(row.set.id) ?? [];
+    const address =
+      row.billPage?.address ||
+      pages.find((p) => p.type === "invoice")?.address ||
+      "অজানা";
+    if (!address.trim()) continue;
+    const existing = byAddress.get(address) ?? {
+      name: address,
+      orderCount: 0,
+      totalAmount: 0,
+    };
+    existing.orderCount += 1;
+    existing.totalAmount += row.total;
+    byAddress.set(address, existing);
+  }
+  return [...byAddress.values()].sort((a, b) => b.totalAmount - a.totalAmount);
+}
+
+/**
  * @typedef {Object} IncomePoint
  * @property {string} label   Display label (dd/mm for day-granularity, "MMM YYYY" for month-granularity).
  * @property {string} dateKey Sort key, "YYYY-MM-DD" or "YYYY-MM".
@@ -238,6 +339,52 @@ const MONTH_LABELS_EN = [
 function formatMonthLabel(yearMonth) {
   const [y, m] = yearMonth.split("-");
   return `${MONTH_LABELS_EN[Number(m) - 1]} ${y}`;
+}
+
+/**
+ * @typedef {Object} YearlyPoint
+ * @property {string} label   "Jan", "Feb", etc — month-only, since this is
+ *   always exactly one calendar year's worth of points.
+ * @property {number} orderCount  Number of Sets (sessions) with a
+ *   displayDate in this month.
+ * @property {number} revenue
+ */
+
+/**
+ * Month-by-month order-count + revenue for one calendar year — feeds the
+ * "Yearly Order and Revenue" dual-line chart (see this project's own
+ * decision: both metrics in one chart, month-based). This chart has its
+ * own independent year navigator (◄ Year ►, separate from the dashboard's
+ * main Month/Year navigator at the top — see this project's own decision
+ * that the main navigator does NOT drive this chart or the Daily Order
+ * Table), so it takes `year` directly rather than reading from whatever
+ * month/year the rest of the dashboard is currently filtered to.
+ *
+ * @param {DashboardRow[]} allRows  Unfiltered — this function does its own
+ *   year-scoping internally.
+ * @param {number} year e.g. 2026
+ * @returns {YearlyPoint[]} Always exactly 12 entries, Jan through Dec,
+ *   even for months with zero sessions (a zero-value point, not a gap in
+ *   the chart, is what "no orders that month" should look like).
+ */
+export function buildYearlyOrderRevenueTrend(allRows, year) {
+  const points = MONTH_LABELS_EN.map((label) => ({
+    label,
+    orderCount: 0,
+    revenue: 0,
+  }));
+
+  for (const row of allRows) {
+    const dateOnly = toDateOnly(row.displayDate);
+    if (!dateOnly) continue;
+    const [rowYear, rowMonth] = dateOnly.split("-");
+    if (Number(rowYear) !== year) continue;
+    const monthIndex = Number(rowMonth) - 1;
+    points[monthIndex].orderCount += 1;
+    points[monthIndex].revenue += row.total;
+  }
+
+  return points;
 }
 
 /**

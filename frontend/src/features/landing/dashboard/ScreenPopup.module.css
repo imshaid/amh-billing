@@ -1,0 +1,52 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 55;
+  padding: var(--space-lg);
+}
+
+.panel {
+  position: relative;
+  background: var(--dash-bg);
+  border-radius: var(--radius-md);
+  width: 100%;
+  max-width: 1000px;
+  height: 85vh;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.25);
+  display: flex;
+  flex-direction: column;
+}
+
+.closeButton {
+  position: absolute;
+  top: var(--space-sm);
+  right: var(--space-sm);
+  z-index: 5;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  background: var(--dash-surface);
+  border: 1px solid var(--chrome-border);
+  border-radius: 50%;
+  color: var(--chrome-text-muted);
+  cursor: pointer;
+}
+
+.closeButton:hover {
+  border-color: var(--dash-blue);
+  color: var(--dash-blue);
+}
+
+.content {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  border-radius: var(--radius-md);
+}

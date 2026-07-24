@@ -6,6 +6,7 @@ import { useOrderedByPersons } from "../../hooks/useOrderedByPersons.js";
 import { updateSet, deleteSet } from "../../db/sets.repository.js";
 import ConfirmDialog from "../shared/ConfirmDialog.jsx";
 import EditSessionModal from "./EditSessionModal.jsx";
+import NewSessionModal from "../landing/NewSessionModal.jsx";
 import styles from "./PreviousSessionsScreen.module.css";
 
 const BN_DIGITS = ["০", "১", "২", "৩", "৪", "৫", "৬", "৭", "৮", "৯"];
@@ -93,8 +94,8 @@ function formatAmount(total) {
  * field's purchaseDate → first-Invoice-date → createdAt fallback chain.
  *
  * Search filters client-side on `set.name` only — there's no dedicated
- * search index in IndexedDB (see db/schema.js) and the expected number of
- * Sets for a single hotel's billing history doesn't call for one yet.
+ * search index in Supabase and the expected number of Sets for a single
+ * hotel's billing history doesn't call for one yet.
  *
  * Selecting a row (anywhere except the overflow menu) dispatches
  * OPEN_SESSION (same action LandingPage's "New Session" card uses) so both
@@ -102,13 +103,19 @@ function formatAmount(total) {
  */
 export default function PreviousSessionsScreen() {
   const { dispatch } = useAppState();
-  const { sets, status: setsStatus, refresh: refreshSets } = useSets();
+  const {
+    sets,
+    status: setsStatus,
+    refresh: refreshSets,
+    createSet,
+  } = useSets();
   const { summaries, status: summariesStatus } = useSessionSummaries(sets);
   const previousPersons = useOrderedByPersons(sets);
   const [query, setQuery] = useState("");
   const [openMenuSetId, setOpenMenuSetId] = useState(null);
   const [editingSet, setEditingSet] = useState(null);
   const [deletingSet, setDeletingSet] = useState(null);
+  const [isNewSessionModalOpen, setIsNewSessionModalOpen] = useState(false);
   const menuRef = useRef(null);
 
   useEffect(() => {
@@ -164,9 +171,28 @@ export default function PreviousSessionsScreen() {
     await refreshSets();
   }
 
+  async function handleConfirmNewSession({ purchaseDate, orderedByPerson }) {
+    const set = await createSet({
+      name: `নতুন সেশন — ${new Date().toLocaleDateString("bn-BD")}`,
+      purchaseDate,
+      orderedByPerson,
+    });
+    setIsNewSessionModalOpen(false);
+    dispatch({ type: "OPEN_SESSION", payload: set.id });
+  }
+
   return (
     <div className={styles.screen}>
-      <h2 className={styles.heading}>আগের সেশনসমূহ</h2>
+      <div className={styles.headerRow}>
+        <h2 className={styles.heading}>আগের সেশনসমূহ</h2>
+        <button
+          type="button"
+          className={styles.newSessionButton}
+          onClick={() => setIsNewSessionModalOpen(true)}
+        >
+          + নতুন সেশন
+        </button>
+      </div>
 
       <input
         type="text"
@@ -309,6 +335,14 @@ export default function PreviousSessionsScreen() {
           confirmLabel="ডিলিট"
           onConfirm={handleConfirmDelete}
           onCancel={() => setDeletingSet(null)}
+        />
+      )}
+
+      {isNewSessionModalOpen && (
+        <NewSessionModal
+          previousPersons={previousPersons}
+          onConfirm={handleConfirmNewSession}
+          onCancel={() => setIsNewSessionModalOpen(false)}
         />
       )}
     </div>

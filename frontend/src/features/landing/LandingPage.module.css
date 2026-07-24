@@ -23,85 +23,6 @@
   color: var(--chrome-text-muted);
 }
 
-/* Row 1: KPI cards + the three quick-action cards, all in one dense row —
-   see this project's own decision to fold navigation directly into the
-   dashboard grid rather than as a separate section below it. */
-.topRow {
-  display: grid;
-  grid-template-columns: repeat(6, 1fr);
-  gap: var(--space-sm);
-  flex-shrink: 0;
-}
-
-.quickActionCard {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  background: var(--dash-surface);
-  border: 1px solid var(--chrome-border);
-  border-left: 4px solid var(--dash-blue);
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  padding: var(--space-sm);
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
-}
-
-.quickActionCard:hover {
-  border-color: var(--dash-blue);
-  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.14);
-}
-
-.quickActionCard:nth-child(5) {
-  border-left-color: var(--dash-teal);
-}
-
-.quickActionCard:nth-child(6) {
-  border-left-color: var(--dash-orange);
-}
-
-.quickActionIcon {
-  font-size: 1.2rem;
-  line-height: 1;
-  flex-shrink: 0;
-}
-
-.quickActionLabel {
-  font-family: var(--font-bengali);
-  font-size: 0.78rem;
-  font-weight: 700;
-  color: var(--chrome-text);
-  white-space: nowrap;
-}
-
-.rangeRow {
-  display: flex;
-  justify-content: flex-end;
-  flex-shrink: 0;
-}
-
-/* Row 2: the main chart grid — income trend (wide) + donut + three
-   breakdown bar charts, all sized to fill remaining vertical space
-   equally (flex: 1 on .dashboard's children below), not stacked to
-   whatever height each chart naturally wants. This is what makes the
-   whole dashboard fit one viewport on large screens without scrolling. */
-.mainGrid {
-  flex: 1;
-  min-height: 0;
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  grid-template-rows: 1fr;
-  gap: var(--space-sm);
-}
-
-.incomeCard {
-  grid-column: span 2;
-}
-
-.donutCard {
-  grid-column: span 1;
-}
-
 .card {
   background: var(--dash-surface);
   border: 1px solid var(--chrome-border);
@@ -114,39 +35,22 @@
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
 }
 
-.cardTitle {
+.cardHeaderRow {
   display: flex;
   align-items: center;
-  gap: 6px;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  margin-bottom: 6px;
+  flex-shrink: 0;
+}
+
+.cardTitle {
   font-family: var(--font-bengali);
   font-size: 0.78rem;
   font-weight: 700;
   color: var(--chrome-text);
-  margin: 0 0 6px 0;
+  margin: 0;
   flex-shrink: 0;
-}
-
-.titleDot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-.dot_blue {
-  background: var(--dash-blue);
-}
-
-.dot_teal {
-  background: var(--dash-teal);
-}
-
-.dot_orange {
-  background: var(--dash-orange);
-}
-
-.dot_purple {
-  background: var(--dash-purple);
 }
 
 .chartBody {
@@ -154,15 +58,169 @@
   min-height: 0;
 }
 
-.bottomRow {
+/* Row 1: 2x2 KPI grid (Total Sessions/Packages/Buyers/Addresses — all
+   clickable, see LandingPage.jsx's own onClick handlers) + Categories
+   segmented-bar card with its own Month/Year navigator. */
+.topSection {
+  display: grid;
+  grid-template-columns: 1.2fr 2fr;
+  gap: var(--space-sm);
+  flex: 1.1;
+  min-height: 0;
+}
+
+.kpiBlock {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  grid-template-rows: repeat(2, 1fr);
+  gap: var(--space-sm);
+}
+
+.kpiCard {
+  background: var(--dash-surface);
+  border: 1px solid var(--chrome-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-sm);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 2px;
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.kpiCard:hover {
+  border-color: var(--dash-blue);
+  box-shadow: 0 2px 10px rgba(37, 99, 235, 0.12);
+}
+
+.kpiLabel {
+  font-family: var(--font-bengali);
+  font-size: 0.72rem;
+  color: var(--chrome-text-muted);
+  margin: 0;
+}
+
+.kpiValue {
+  font-family: var(--font-ui);
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--dash-blue);
+  margin: 0;
+}
+
+.categoriesCard {
+  min-width: 0;
+}
+
+/* Row 2: today's sales + this month's income (with trend) + the
+   "নতুন সেশন" quick-action card, all one dense row. */
+.summaryRow {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-sm);
   flex-shrink: 0;
+  min-height: 78px;
+}
+
+.summaryValue {
+  font-family: var(--font-ui);
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--chrome-text);
+  margin: 2px 0 0 0;
+}
+
+.summaryTrend {
+  font-family: var(--font-ui);
+  font-size: 0.7rem;
+  color: var(--chrome-text-muted);
+  margin: 2px 0 0 0;
+}
+
+.quickActionCard {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: var(--dash-blue);
+  color: #ffffff;
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+
+.quickActionCard:hover {
+  background: #1d4ed8;
+}
+
+.quickActionIcon {
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+.quickActionLabel {
+  font-family: var(--font-bengali);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+/* Row 3: Yearly Order/Revenue (wide, own year navigator) + two donuts. */
+.mainGrid {
+  flex: 1.6;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-sm);
+}
+
+.yearlyCard {
+  grid-column: span 2;
+}
+
+.yearNav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.yearNavButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  font-size: 0.95rem;
+  color: var(--chrome-text-muted);
+  background: none;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.yearNavButton:hover {
+  background: var(--dash-blue-bg);
+  color: var(--dash-blue);
+}
+
+.yearLabel {
+  font-family: var(--font-ui);
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--chrome-text);
+  padding: 0 2px;
+}
+
+.bottomRow {
+  flex: 1;
+  min-height: 0;
 }
 
 /* NOTE: literal copy of --breakpoint-mobile — see WorkspaceView.module.css.
    Below this width the dashboard is no longer forced into one screen —
    see this project's own decision: "non-scrollable" is a large-screen
-   requirement only, a phone genuinely can't show this much data at once
-   without either scrolling or becoming illegibly small. */
+   requirement only. */
 @media (max-width: 768px) {
   .dashboard {
     height: auto;
@@ -170,27 +228,37 @@
     padding: var(--space-md);
   }
 
-  .topRow {
+  .topSection {
+    grid-template-columns: 1fr;
+  }
+
+  .kpiBlock {
     grid-template-columns: repeat(2, 1fr);
   }
 
+  .summaryRow {
+    grid-template-columns: 1fr;
+  }
+
   .mainGrid {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-sm);
+    grid-template-columns: 1fr;
+  }
+
+  .yearlyCard {
+    grid-column: span 1;
   }
 
   .card {
     min-height: 220px;
   }
-
-  .donutCard {
-    min-height: 260px;
-  }
 }
 
 @media (min-width: 769px) and (max-width: 1100px) {
-  .topRow {
-    grid-template-columns: repeat(3, 1fr);
+  .mainGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .yearlyCard {
+    grid-column: span 2;
   }
 }
