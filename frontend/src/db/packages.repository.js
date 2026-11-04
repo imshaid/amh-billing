@@ -1,6 +1,7 @@
 import { supabase } from "./supabaseClient.js";
 import { packageToRow, rowToPackage } from "./rowMapping.js";
 import { createPackage } from "../domain/models/Package.js";
+import { getAllCategories, addCategory } from "./categories.repository.js";
 
 /**
  * All reads/writes to Packages go through this file, straight to
@@ -118,7 +119,25 @@ export async function seedPackagesIfEmpty(inputs) {
   if (countError) throw countError;
   if (count > 0) return;
 
-  const created = inputs.map((input) => createPackage(input));
+  // Seed entries name their category by display name (`category`), but
+  // Package stores a real `categoryId`. Resolve each name to an existing
+  // category, creating it (appended after the existing ones) if missing.
+  const idByName = new Map(
+    (await getAllCategories()).map((c) => [c.name, c.id]),
+  );
+  for (const name of new Set(inputs.map((i) => i.category).filter(Boolean))) {
+    if (!idByName.has(name)) {
+      const category = await addCategory({ name });
+      idByName.set(name, category.id);
+    }
+  }
+
+  const created = inputs.map(({ category, ...input }) =>
+    createPackage({
+      ...input,
+      categoryId: category ? (idByName.get(category) ?? null) : null,
+    }),
+  );
   const { error } = await supabase
     .from("packages")
     .insert(created.map(packageToRow));
