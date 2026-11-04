@@ -55,7 +55,7 @@
   border-collapse: separate;
   border-spacing: 0;
   margin-top: 6px;
-  font-size: 13.5px;
+  font-size: 12px;
   position: relative;
   z-index: 1;
   /* Covers exactly the table's own outer BOTTOM and RIGHT edges — every
@@ -105,7 +105,7 @@
   box-shadow:
     inset 0 0.5px 0 0 var(--brand-blue),
     inset 0.5px 0 0 0 var(--brand-blue);
-  padding: 3px 6px;
+  padding: 2px 4px;
   vertical-align: center;
 }
 
@@ -120,13 +120,13 @@
   width: 4%;
 }
 .colPackage {
-  width: 12%;
+  width: 17%;
 }
 .colItems {
-  width: 55%;
+  width: 54%;
 }
 .colQty {
-  width: 9%;
+  width: 8%;
   font-variant-numeric: tabular-nums;
 }
 .colRate {
@@ -134,7 +134,7 @@
   font-variant-numeric: tabular-nums;
 }
 .colAmount {
-  width: 12%;
+  width: 9%;
   font-variant-numeric: tabular-nums;
 }
 
@@ -166,13 +166,13 @@
 
 .itemsList {
   margin: 0;
-  padding-left: 16px;
+  padding-left: 14px;
   padding-right: 4px;
   text-align: justify;
 }
 
 .itemsList li {
-  margin: 3.5px 0;
+  margin: 1px 0;
 }
 
 .totalLabel {
